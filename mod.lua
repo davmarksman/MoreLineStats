@@ -1,13 +1,13 @@
 function data()
 	return {
 		info = {
-			description = _("modDesc"),
-			name = _("More Line Stats"),
+			description = _("tbd"),
+			name = _("More Line Statistics"),
 			minorVersion = 0,
 			severityAdd = "NONE",
 			severityRemove = "WARNING",
 			params = { },
-			tags = { "Script Mod","Script", "Line Stats" },
+			tags = { "Script Mod","Script", "Statistics",  },
 			authors = { -- OPTIONAL one or multiple authors
 				{
 					name = "David M", -- author name
