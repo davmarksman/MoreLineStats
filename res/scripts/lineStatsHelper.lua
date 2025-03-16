@@ -342,6 +342,16 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
     return res
 end
 
+-------------------------------------------------------------
+---------------------- Issues Locating Functions ------------
+-------------------------------------------------------------
+
+-- Stop with more people than train capacity (divide line capacity/no of vehicles)
+
+
+-- 2x more people waiting than loaded
+
+
 
 -------------------------------------------------------------
 ---------------------- Util Functions ----------------------
@@ -419,7 +429,6 @@ function lineStatsHelper.createOneBasedArray(count, defaultVal)
 end
 
 -- returns Number, current GameTime in seconds
-
 function lineStatsHelper.getTime()
     local time = api.engine.getComponent(api.engine.util.getWorld(), api.type.ComponentType.GAME_TIME).gameTime
     return lineStatsHelper.getTimeInSecs(time)
@@ -436,6 +445,23 @@ function lineStatsHelper.getTimeInSecs(time)
     end
 end
 
+
+---@param time number
+-- returns Formated time string
+function lineStatsHelper.getTimeStr(time)
+    if not(type(time) == "number") then return "ERROR" end 
+
+    local timeStr = os.date('%M:%S', time)
+    if(time == 0) then
+        timeStr = "--:--"
+    end
+    return timeStr
+end
+
+
+---@param num number
+---@param denom number
+---Returns 0 if denominator is 0, the num/denom otherwise
 function lineStatsHelper.safeDivide(num, denom)
     if denom == 0 then
         return 0

@@ -56,6 +56,23 @@ function timetableHelper.isLineOfType(lineType)
     return res
 end
 
+---@param line  number | string
+---@param lineType string, eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
+-- returns Bool
+function timetableHelper.lineHasType(line, lineType)
+    if type(line) == "string" then line = tonumber(line) end
+    if not(type(line) == "number") then print("Expected String or Number") return -1 end
+
+    local vehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line)
+    if vehicles and vehicles[1] then
+        local component = api.engine.getComponent(vehicles[1], api.type.ComponentType.TRANSPORT_VEHICLE)
+        if component and component.carrier then
+            return component.carrier  == api.type.enum.Carrier[lineType]
+        end
+    end
+    return false
+end
+
 ---@param line number | string
 -- returns lineName : String
 function timetableHelper.getLineName(line)
