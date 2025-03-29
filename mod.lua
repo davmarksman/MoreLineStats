@@ -32,7 +32,7 @@ This provides a list of potentially lost trains. Trains are thought to be lost w
 
 OTHER
 - This mod doesn't show any stats about cargo
-- Future plans include showing the rate of change at stops which will help provide a more accurate line rate style statistic
+- Future plans include showing the rate of change at stops which will provide a line rate vs demand estimate
 - Let me know in the comments if you encounter any issues or would like to add any feature requests. 
 
 CREDITS
