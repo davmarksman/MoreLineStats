@@ -135,25 +135,31 @@ end
 ---------------------- Line related -------------------------
 -------------------------------------------------------------
 
+---@param lineId number | string
+-- returns leg Times for line
 function lineStatsHelper.getLegTimes(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return {} end
 
-    local vehicleLineMap = api.engine.system.transportVehicleSystem.getLine2VehicleMap()
-    if vehicleLineMap[lineId] == nil or vehicleLineMap[lineId][1] == nil then return {}end
-
-    local noOfVeh = #vehicleLineMap[lineId]
-    local noOfStops = #api.engine.getComponent(lineId, api.type.ComponentType.LINE).stops
+    local vehiclesForLine = api.engine.system.transportVehicleSystem.getLineVehicles(lineId)
+    local noOfVeh = #vehiclesForLine
+    local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
+    local noOfStops = #lineComp.stops
 
     -- Create a matrix[leg][vehicleLegTime]. 
     -- Legs are the first index. We then store the value for the vehicle legtimes for that leg in the second index
     local legTimes = lineStatsHelper.createOneBasedArrayOfArrays(noOfStops, noOfVeh, 0)
     
-    for vehIdx, vehicle in pairs(vehicleLineMap[lineId]) do
-        local res = lineStatsHelper.getSectionTimesFromVeh(vehicle)
-        if res then
-            for legIdx, legTime in pairs(res) do
-                if legTime > 0 then
+    for vehIdx, vehicleId in pairs(vehiclesForLine) do
+        local sectionTimes = lineStatsHelper.getSectionTimesFromVeh(vehicleId)
+        if sectionTimes then
+            
+            -- Noticed a bug where when do `for .. pairs(sectionTimes)`, that there are sometimes additional entries and an infinite loop
+            -- aka a memory leak. Can't see what's causing it as it happens on a lineIds that worked fine seconds ago
+            -- We'll play defensive do a for loop on noOfStops
+            for legIdx = 1, noOfStops do
+                local legTime = sectionTimes[legIdx]
+                if legTime and legTime > 0 then
                     legTimes[legIdx][vehIdx] = legTime
                 end
             end
@@ -168,29 +174,8 @@ function lineStatsHelper.getLegTimes(lineId)
     return toReturn
 end
 
-
--- Modified from timetableHelper to try other vehicles too if section times is not on the first vehicle
----@param line number | string
--- returns [time: Number] Array indexed by station index in sec starting with index 1
-function lineStatsHelper.getLegTimes2(line)
-    if type(line) == "string" then line = tonumber(line) end
-    if not(type(line) == "number") then return {} end
-
-    local vehicleLineMap = api.engine.system.transportVehicleSystem.getLine2VehicleMap()
-    if vehicleLineMap[line] == nil or vehicleLineMap[line][1] == nil then return {}end
-
-    for _, vehicle in pairs(vehicleLineMap[line]) do
-        local res = lineStatsHelper.getSectionTimesFromVeh(vehicle)
-        if res then
-            return res
-        end
-    end
-
-    return {}
-end
-
-function lineStatsHelper.getSectionTimesFromVeh(vehicle)
-    local vehicleObject = api.engine.getComponent(vehicle, api.type.ComponentType.TRANSPORT_VEHICLE)
+function lineStatsHelper.getSectionTimesFromVeh(vehicleId)
+    local vehicleObject = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
     if vehicleObject and vehicleObject.sectionTimes then
         return vehicleObject.sectionTimes
     else
@@ -313,7 +298,9 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
 
     local gameTime = lineStatsHelper.getTime()
     local personsForLineArr = api.engine.system.simPersonSystem.getSimPersonsForLine(lineId)
-    local noOfStops = #api.engine.getComponent(lineId, api.type.ComponentType.LINE).stops
+
+    local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
+    local noOfStops = #lineComp.stops
 
     local res = {}
     res.totalCount = 0
@@ -481,7 +468,8 @@ end
 
 -- returns Number, current GameTime in seconds
 function lineStatsHelper.getTime()
-    local time = api.engine.getComponent(api.engine.util.getWorld(), api.type.ComponentType.GAME_TIME).gameTime
+    local gameTimeComp = api.engine.getComponent(api.engine.util.getWorld(), api.type.ComponentType.GAME_TIME)
+    local time = gameTimeComp.gameTime
     return lineStatsHelper.getTimeInSecs(time)
 end
 
