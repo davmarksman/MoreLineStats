@@ -229,17 +229,6 @@ function timetableHelper.getAllVehiclesAtTerminal()
 end
 
 
--- returns Number, current GameTime in seconds
-function timetableHelper.getTime()
-    local time = api.engine.getComponent(api.engine.util.getWorld(), api.type.ComponentType.GAME_TIME).gameTime
-    if time then
-        time = math.floor(time/ 1000)
-        return time
-    else
-        return 0
-    end
-end
-
 ---@param tab table
 ---@param val any
 -- returns Bool,
