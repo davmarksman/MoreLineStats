@@ -25,7 +25,7 @@ function lineStatsHelper.findLostTrains()
                     if lineLegTimes and lineLegTimes[1] then
                         -- Use leg times to work out if vehicle is lost
                         local maxLegTime = timetableHelper.maximumArray(lineLegTimes)
-                        local avgLegTime = lineStatsHelper.averageArray(lineLegTimes)
+                        local avgLegTime = lineStatsHelper.avgNonZeroValuesInArray(lineLegTimes)
 
                         if maxLegTime > 0 and timeSinceDep > 2 * maxLegTime then
                             res[vehicleId] = timeSinceDep
@@ -142,23 +142,27 @@ function lineStatsHelper.getLegTimes(lineId)
     local vehicleLineMap = api.engine.system.transportVehicleSystem.getLine2VehicleMap()
     if vehicleLineMap[lineId] == nil or vehicleLineMap[lineId][1] == nil then return {}end
 
+    local noOfVeh = #vehicleLineMap[lineId]
     local noOfStops = #api.engine.getComponent(lineId, api.type.ComponentType.LINE).stops
-    local legTimes = lineStatsHelper.createOneBasedArrayOfArrays(noOfStops)
 
-    for _, vehicle in pairs(vehicleLineMap[lineId]) do
+    -- Create a matrix[leg][vehicleLegTime]. 
+    -- Legs are the first index. We then store the value for the vehicle legtimes for that leg in the second index
+    local legTimes = lineStatsHelper.createOneBasedArrayOfArrays(noOfStops, noOfVeh, 0)
+    
+    for vehIdx, vehicle in pairs(vehicleLineMap[lineId]) do
         local res = lineStatsHelper.getSectionTimesFromVeh(vehicle)
         if res then
-            for i, legTime in pairs(res) do
+            for legIdx, legTime in pairs(res) do
                 if legTime > 0 then
-                    table.insert(legTimes[i], legTime)
+                    legTimes[legIdx][vehIdx] = legTime
                 end
             end
         end
     end
 
     local toReturn = lineStatsHelper.createOneBasedArray(noOfStops, 0)
-    for i, _ in pairs(legTimes) do
-        toReturn[i] = lineStatsHelper.averageArray(legTimes[i])
+    for i=1, #legTimes do
+        toReturn[i] = lineStatsHelper.avgNonZeroValuesInArray(legTimes[i])
     end
 
     return toReturn
@@ -219,7 +223,6 @@ function lineStatsHelper.getLineTimesBetweenStation(startStationId, endStationId
         return {}
     end
 
-    print("getLinesThroughStation " .. startStationId .. " - " .. endStationId )
     local startStationLines = api.engine.system.lineSystem. getLineStops(startStationId)
     local endStationLines = api.engine.system.lineSystem. getLineStops(endStationId)
 
@@ -227,18 +230,7 @@ function lineStatsHelper.getLineTimesBetweenStation(startStationId, endStationId
     local linesBetweenStation = lineStatsHelper.intersect(startStationLines, endStationLines)
 
     local res = {}
-    for _, lineId in pairs(linesBetweenStation) do
-        -- local stationLegTime = lineStatsHelper.getLegTimes(lineId)
-        -- for idx, lineStationId in pairs(timetableHelper.getAllStations(lineId)) do
-        --     local jurneyTime = ""
-        --     if (stationLegTime and stationLegTime[idx]) then
-        --         jurneyTime = "Journey Time: " .. os.date('%M:%S', stationLegTime[idx])
-        --     else
-        --         jurneyTime = ""
-        --     end
-        --     print("idx " .. idx .. " - lineStationId " .. lineStationId .. " stationLegTime " .. jurneyTime)
-        -- end
-   
+    for _, lineId in pairs(linesBetweenStation) do   
         local time = lineStatsHelper.getTimeBetweenStations(lineId, startStationId, endStationId)
         res[lineId] = time
     end
@@ -269,8 +261,8 @@ function lineStatsHelper.getTimeBetweenStations(lineId, startStationId, endStati
         end
     end
 
-    for s, sidx in pairs(startStopNos) do
-        for e, eidx in pairs(endStopNos) do
+    for _, sidx in pairs(startStopNos) do
+        for _, eidx in pairs(endStopNos) do
             local i = sidx
             local totalTime = 0
             while i ~= eidx do
@@ -329,7 +321,6 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
     res.inVehCount = 0
     res.peopleAtStop = lineStatsHelper.createOneBasedArray(noOfStops, 0)
     res.peopleAtStop5m = lineStatsHelper.createOneBasedArray(noOfStops, 0)
-    -- res.peopleMoving = lineStatsHelper.createZeroBasedArray(noOfStops, 0)
     local stopWaitTimes = lineStatsHelper.createOneBasedArray(noOfStops, 0)
     res.stopAvgWaitTimes = lineStatsHelper.createOneBasedArray(noOfStops, 0)
 
@@ -412,7 +403,26 @@ function lineStatsHelper.intersect(a,b)
         end
 	end
 
-    return intersectVals
+    return lineStatsHelper.distinctArr(intersectVals)
+end
+
+---@param arr table
+-- Removes Duplicate elements https://stackoverflow.com/questions/20066835/lua-remove-duplicate-elements
+function  lineStatsHelper.distinctArr(arr)
+    
+    if arr == nil then return {} end
+
+    local hash = {}
+    local res = {}
+
+    for _,v in ipairs(arr) do
+        if (not hash[v]) then
+            res[#res+1] = v
+            hash[v] = true
+        end
+    end
+
+    return res
 end
 
 ---@param tab table
@@ -442,16 +452,6 @@ function lineStatsHelper.sortByValues(tab)
     return entities
 end
 
----@param count number
----@param defaultVal number | string | any
--- returns a zero based array with all values set to defaultVal
-function lineStatsHelper.createZeroBasedArray(count, defaultVal)
-    local arr={}
-    for i=0,count do
-        arr[i]=defaultVal
-    end
-    return arr
-end
 
 ---@param count number
 ---@param defaultVal number | string | any
@@ -464,14 +464,19 @@ function lineStatsHelper.createOneBasedArray(count, defaultVal)
     return arr
 end
 
----@param count number
--- returns a index one based array with all values set to defaultVal
-function lineStatsHelper.createOneBasedArrayOfArrays(count)
-    local arr={}
-    for i=1,count do
-        arr[i]={}
+---@param n number
+---@param m number
+---@param defaultVal number | string | any
+-- returns a Matrices/Multi-Dimensional Array. See https://www.lua.org/pil/11.2.html
+function lineStatsHelper.createOneBasedArrayOfArrays(n,m, defaultVal)
+    local matrix={}
+    for i=1,n do
+        matrix[i]={}
+        for j=1,m do
+            matrix[i][j] = defaultVal
+        end
     end
-    return arr
+    return matrix
 end
 
 -- returns Number, current GameTime in seconds
@@ -517,13 +522,17 @@ function lineStatsHelper.safeDivide(num, denom)
 end
 
 ---@param arr table
--- returns the avearge
-function lineStatsHelper.averageArray(arr)
+-- returns the avearge of non zero values
+function lineStatsHelper.avgNonZeroValuesInArray(arr)
     local total = 0
+    local count = 0
     for k,_ in pairs(arr) do
-        total = total + arr[k]
+        if (arr[k] > 0) then
+            total = total + arr[k]
+            count = count + 1
+        end
     end
-    return lineStatsHelper.safeDivide(total, #arr)
+    return lineStatsHelper.safeDivide(total, count)
 end
 
 

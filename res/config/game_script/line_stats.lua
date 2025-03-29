@@ -107,7 +107,6 @@ end
 
 
 function lineStatsGUI.initLostTrainsTable()
-    print("initLostTrainsTable")
     if menu.scrollAreaLostTrains then
         UIState.boxLayoutLost:removeItem(menu.scrollAreaLostTrains)
     end
@@ -501,13 +500,9 @@ end
 
 function lineStatsGUI.fillDetailsTable(index,lineID)
     -- index is 0 based
-    print("FillDetailsTable: " ..  index .. " lineID: " .. lineID)
-    --menu.lineTable:deleteRows(0,menu.lineTable:getNumRows())
-
     menu.detailsTable:deleteAll()
     
     local stations = timetableHelper.getAllStations(lineID)
-    print(#stations)
     if index < 0 or index > #stations then
         return
     end
