@@ -8,7 +8,7 @@ local lineStatsHelper = {}
 -------------------------------------------------------------
 
 -- returns table where index is vehicle id, and value is time since last depature
-function lineStatsHelper.FindLostVehicles()
+function lineStatsHelper.findLostTrains()
     local gameTime = lineStatsHelper.getTime()
     local vehicles = lineStatsHelper.getAllVehiclesEnRoute()
     local res = {}
@@ -20,13 +20,19 @@ function lineStatsHelper.FindLostVehicles()
                 local lastDeparture = lineStatsHelper.getLastDepartureTimeFromVeh(vehicle)
                 local timeSinceDep = gameTime - lastDeparture
 
-                if lastDeparture > 0 and timeSinceDep >  120 then
+                if lastDeparture > 0 and timeSinceDep >  180 then
                     local lineLegTimes = lineStatsHelper.getLegTimes(vehicle.line)
                     if lineLegTimes and lineLegTimes[1] then
                         -- Use leg times to work out if vehicle is lost
                         local maxLegTime = timetableHelper.maximumArray(lineLegTimes)
+                        local avgLegTime = lineStatsHelper.averageArray(lineLegTimes)
 
                         if maxLegTime > 0 and timeSinceDep > 2 * maxLegTime then
+                            res[vehicleId] = timeSinceDep
+                        -- Sometimes max leg time is high as train was lost and it's updated legTime to be 
+                        -- how long it took lost train to find station
+                        -- Estimate as lost using average leg time
+                        elseif maxLegTime > 8 * 60 and timeSinceDep > 3 * avgLegTime then
                             res[vehicleId] = timeSinceDep
                         end
                     else
@@ -129,32 +135,62 @@ end
 ---------------------- Line related -------------------------
 -------------------------------------------------------------
 
--- Modified from timetableHelper to try second vehicle too
+function lineStatsHelper.getLegTimes(lineId)
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return {} end
+
+    local vehicleLineMap = api.engine.system.transportVehicleSystem.getLine2VehicleMap()
+    if vehicleLineMap[lineId] == nil or vehicleLineMap[lineId][1] == nil then return {}end
+
+    local noOfStops = #api.engine.getComponent(lineId, api.type.ComponentType.LINE).stops
+    local legTimes = lineStatsHelper.createOneBasedArrayOfArrays(noOfStops)
+
+    for _, vehicle in pairs(vehicleLineMap[lineId]) do
+        local res = lineStatsHelper.getSectionTimesFromVeh(vehicle)
+        if res then
+            for i, legTime in pairs(res) do
+                if legTime > 0 then
+                    table.insert(legTimes[i], legTime)
+                end
+            end
+        end
+    end
+
+    local toReturn = lineStatsHelper.createOneBasedArray(noOfStops, 0)
+    for i, _ in pairs(legTimes) do
+        toReturn[i] = lineStatsHelper.averageArray(legTimes[i])
+    end
+
+    return toReturn
+end
+
+
+-- Modified from timetableHelper to try other vehicles too if section times is not on the first vehicle
 ---@param line number | string
 -- returns [time: Number] Array indexed by station index in sec starting with index 1
-function lineStatsHelper.getLegTimes(line)
+function lineStatsHelper.getLegTimes2(line)
     if type(line) == "string" then line = tonumber(line) end
     if not(type(line) == "number") then return {} end
 
     local vehicleLineMap = api.engine.system.transportVehicleSystem.getLine2VehicleMap()
     if vehicleLineMap[line] == nil or vehicleLineMap[line][1] == nil then return {}end
-    local vehicle = vehicleLineMap[line][1]
+
+    for _, vehicle in pairs(vehicleLineMap[line]) do
+        local res = lineStatsHelper.getSectionTimesFromVeh(vehicle)
+        if res then
+            return res
+        end
+    end
+
+    return {}
+end
+
+function lineStatsHelper.getSectionTimesFromVeh(vehicle)
     local vehicleObject = api.engine.getComponent(vehicle, api.type.ComponentType.TRANSPORT_VEHICLE)
     if vehicleObject and vehicleObject.sectionTimes then
         return vehicleObject.sectionTimes
     else
-        -- try second vehicle
-        if vehicleLineMap[line][2] == nil then             
-            return {}
-        end
-        local vehicle2 = vehicleLineMap[line][1]
-        local vehicleObject2 = api.engine.getComponent(vehicle2, api.type.ComponentType.TRANSPORT_VEHICLE)
-
-        if vehicleObject2 and vehicleObject2.sectionTimes then
-            return vehicleObject2.sectionTimes
-        else
-            return {}
-        end
+        return nil
     end
 end
 
@@ -428,6 +464,16 @@ function lineStatsHelper.createOneBasedArray(count, defaultVal)
     return arr
 end
 
+---@param count number
+-- returns a index one based array with all values set to defaultVal
+function lineStatsHelper.createOneBasedArrayOfArrays(count)
+    local arr={}
+    for i=1,count do
+        arr[i]={}
+    end
+    return arr
+end
+
 -- returns Number, current GameTime in seconds
 function lineStatsHelper.getTime()
     local time = api.engine.getComponent(api.engine.util.getWorld(), api.type.ComponentType.GAME_TIME).gameTime
@@ -470,7 +516,17 @@ function lineStatsHelper.safeDivide(num, denom)
     end
 end
 
+---@param arr table
+-- returns the avearge
+function lineStatsHelper.averageArray(arr)
+    local total = 0
+    for k,_ in pairs(arr) do
+        total = total + arr[k]
+    end
+    return lineStatsHelper.safeDivide(total, #arr)
+end
+
+
 
 return lineStatsHelper
-
 

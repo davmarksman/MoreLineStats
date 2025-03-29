@@ -188,15 +188,15 @@ function lineStatsGUI.fillLostLines()
     print("Find Lost Vehicles")
     menu.lostTrainsTable:deleteRows(0,menu.lostTrainsTable:getNumRows())
 
-    local lostVehicles = lineStatsHelper.FindLostVehicles()
+    local lostTrains = lineStatsHelper.findLostTrains()
 
     local lblCol1 = api.gui.comp.TextView.new("Line")
     local lblCol2 = api.gui.comp.TextView.new("Name")
     local lblCol3 = api.gui.comp.TextView.new("Time Since Departure")
     menu.lostTrainsTable:addRow({lblCol1, lblCol2,lblCol3 })
 
-    if lostVehicles then
-        for vehicleId, timeSinceDep in pairs(lostVehicles) do
+    if lostTrains then
+        for vehicleId, timeSinceDep in pairs(lostTrains) do
             local vehicleName = lineStatsHelper.getVehicleName(vehicleId)
             local lineName = lineStatsHelper.getLineNameOfVehicle(vehicleId)
     
@@ -379,6 +379,8 @@ function lineStatsGUI.fillStationTable(index)
 
     --iterate over all stations to display them
     local stationsList = timetableHelper.getAllStations(lineID)
+    local stationLegTimes = lineStatsHelper.getLegTimes(lineID)
+
     for k, v in pairs(stationsList) do
         menu.lineImage = {}
         local vehiclePositions = timetableHelper.getTrainLocations(lineID)
@@ -464,10 +466,9 @@ function lineStatsGUI.fillStationTable(index)
         end
 
         -- Journey time column
-        local stationLegTime = lineStatsHelper.getLegTimes(lineID)
         local lblJurneyTime
-        if (stationLegTime and stationLegTime[k]) then
-            lblJurneyTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(stationLegTime[k]))
+        if (stationLegTimes and stationLegTimes[k]) then
+            lblJurneyTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(stationLegTimes[k]))
         else
             lblJurneyTime = api.gui.comp.TextView.new("")
         end
