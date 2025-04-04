@@ -223,7 +223,7 @@ function lineStatsGUI.fillLineTable()
     menu.lineHeader = api.gui.comp.Table.new(6, 'None')
     local sortAll   = api.gui.comp.ToggleButton.new(api.gui.comp.TextView.new("All"))
     local sortBus   = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_road_vehicles.tga"))
-    local sortTram  = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/TimetableTramIcon.tga"))
+    local sortTram  = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/tram/TimetableTramIcon.tga"))
     local sortRail  = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_trains.tga"))
     local sortWater = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_ships.tga"))
     local sortAir   = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_planes.tga"))
@@ -363,6 +363,7 @@ function lineStatsGUI.fillStationTable(index)
 
     UIState.currentlySelectedLineTableIndex = index
     local lineID = timetableHelper.getAllLines()[index+1].id
+    local vehicleType = timetableHelper.getLineType(lineID)
 
     -- Header
     local passengerStats = lineStatsHelper.getPassengerStatsForLine(lineID)
@@ -384,20 +385,20 @@ function lineStatsGUI.fillStationTable(index)
         menu.lineImage = {}
         local vehiclePositions = timetableHelper.getTrainLocations(lineID)
         if vehiclePositions[k-1] then
-            if vehiclePositions[k-1].atTerminal then
-                if vehiclePositions[k-1].countStr == "MANY" then
-                    menu.lineImage[k] = api.gui.comp.ImageView.new("ui/timetable_line_train_in_station_many.tga")
-                else
-                    menu.lineImage[k] = api.gui.comp.ImageView.new("ui/timetable_line_train_in_station.tga")
-                end
-            else
-                if vehiclePositions[k-1].countStr == "MANY" then
-                    menu.lineImage[k] = api.gui.comp.ImageView.new("ui/timetable_line_train_en_route_many.tga")
-                else
-                    menu.lineImage[k] = api.gui.comp.ImageView.new("ui/timetable_line_train_en_route.tga")
-                end
-            end
-        else
+			if vehiclePositions[k-1].atTerminal then
+				if vehiclePositions[k-1].countStr == "MANY" then
+					menu.lineImage[k] = api.gui.comp.ImageView.new("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga")
+				else
+					menu.lineImage[k] = api.gui.comp.ImageView.new("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga")
+				end
+			else
+				if vehiclePositions[k-1].countStr == "MANY" then
+					menu.lineImage[k] = api.gui.comp.ImageView.new("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga")
+				else
+					menu.lineImage[k] = api.gui.comp.ImageView.new("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route.tga")
+				end
+			end
+		else
             menu.lineImage[k] = api.gui.comp.ImageView.new("ui/timetable_line.tga")
         end
         local x = menu.lineImage[k]
@@ -405,20 +406,20 @@ function lineStatsGUI.fillStationTable(index)
             if not x then print("ERRROR") return end
             local vehiclePositions2 = timetableHelper.getTrainLocations(lineID)
             if vehiclePositions2[k-1] then
-                if vehiclePositions2[k-1].atTerminal then
-                    if vehiclePositions2[k-1].countStr == "MANY" then
-                        x:setImage("ui/timetable_line_train_in_station_many.tga", false)
-                    else
-                        x:setImage("ui/timetable_line_train_in_station.tga", false)
-                    end
-                else
-                    if vehiclePositions2[k-1].countStr == "MANY" then
-                        x:setImage("ui/timetable_line_train_en_route_many.tga", false)
-                    else
-                        x:setImage("ui/timetable_line_train_en_route.tga", false)
-                    end
-                end
-            else
+				if vehiclePositions2[k-1].atTerminal then
+					if vehiclePositions2[k-1].countStr == "MANY" then
+						x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga", false)
+					else
+						x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga", false)
+					end
+				else
+					if vehiclePositions2[k-1].countStr == "MANY" then
+						x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga", false)
+					else
+						x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route.tga", false)
+					end
+				end
+			else
                 x:setImage("ui/timetable_line.tga", false)
             end
         end)
