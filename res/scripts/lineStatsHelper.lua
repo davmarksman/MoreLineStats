@@ -84,7 +84,7 @@ function lineStatsHelper.getLastDepartureTimeFromVeh(lineVehicle)
     return lineStatsHelper.getTimeInSecs(lastDepartureTime)
 end
 
--- returns [vehicleID:number]
+-- returns arr:[vehicleID:number]
 function lineStatsHelper.getAllVehiclesEnRoute()
     return api.engine.system.transportVehicleSystem.getVehiclesWithState(api.type.enum.TransportVehicleState.EN_ROUTE)
 end
@@ -105,7 +105,7 @@ end
 
 
 ---@param vehicleID number | string
--- returns bool
+-- returns vehicle name
 function lineStatsHelper.getVehicleName(vehicleID) 
     if type(vehicleID) == "string" then vehicleID = tonumber(vehicleID) end
     if not(type(vehicleID) == "number") then print("Expected String or Number") return false end
@@ -117,7 +117,7 @@ function lineStatsHelper.getVehicleName(vehicleID)
 end
 
 ---@param vehicleID number | string
--- returns bool
+-- returns returns line name of vehicel
 function lineStatsHelper.getLineNameOfVehicle(vehicleID) 
     local vehicle = lineStatsHelper.getVehicle(vehicleID)
     if vehicle and vehicle.line then
@@ -129,7 +129,7 @@ end
 
 
 ---@param lineId number | string
--- returns leg Times for line
+-- returns vehicles for line
 function lineStatsHelper.getVehicles(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return {} end
@@ -190,6 +190,22 @@ function lineStatsHelper.getSectionTimesFromVeh(vehicleId)
         return vehicleObject.sectionTimes
     else
         return nil
+    end
+end
+
+
+---@param line number | string
+-- returns lineFrequency : String, formatted '%M:%S'
+function lineStatsHelper.getFrequencyNum(line)
+    if type(line) == "string" then line = tonumber(line) end
+    if not(type(line) == "number") then return "ERROR" end
+
+    local lineEntity = game.interface.getEntity(line)
+    if lineEntity and lineEntity.frequency then
+        if lineEntity.frequency == 0 then return 0 end
+        return 1 / lineEntity.frequency
+    else
+        return 0
     end
 end
 
@@ -300,8 +316,9 @@ end
 -- totalCount= Number
 -- waitingCount = Number
 -- inVehCount = Number
--- peopleAtStop = [Number], number of people waiting at stops
--- stopAvgWaitTimes = [Number], average wait time at stops
+-- peopleAtStop = [Number], arr: number of people waiting at each stop
+-- peopleAtStopLongWait = [Number], arr: number of people waiting for a long time at each stop
+-- stopAvgWaitTimes = [Number], arr: average wait time at each stop
 function lineStatsHelper.getPassengerStatsForLine(lineId)
     if type(lineId) == "string" then line = tonumber(lineId) end
     if not(type(lineId) == "number") then return "ERROR" end 
@@ -311,19 +328,19 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
 
     local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
     local noOfStops = #lineComp.stops
+    local lineFreq = lineStatsHelper.getFrequencyNum(lineId)
 
     local res = {}
     res.totalCount = 0
     res.waitingCount = 0
     res.inVehCount = 0
     res.peopleAtStop = lineStatsHelper.createOneBasedArray(noOfStops, 0)
-    res.peopleAtStop5m = lineStatsHelper.createOneBasedArray(noOfStops, 0)
+    res.peopleAtStopLongWait = lineStatsHelper.createOneBasedArray(noOfStops, 0)
     local stopWaitTimes = lineStatsHelper.createOneBasedArray(noOfStops, 0)
     res.stopAvgWaitTimes = lineStatsHelper.createOneBasedArray(noOfStops, 0)
 
-    for i, personId in pairs(personsForLineArr) do 
+    for _, personId in pairs(personsForLineArr) do 
         local simEntityAtTerminal = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
-        local simEntityMoving = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_MOVING)
         local simEntityAtVeh= api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_VEHICLE)
 
         -- Waiting at terminal
@@ -335,8 +352,8 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
                 res.peopleAtStop[stopNo] = res.peopleAtStop[stopNo] + 1
                 local waitTime = gameTime - lineStatsHelper.getTimeInSecs(simEntityAtTerminal.arrivalTime)
                 stopWaitTimes[stopNo] = stopWaitTimes[stopNo] + waitTime
-                if (waitTime < 300) then
-                    res.peopleAtStop5m[stopNo] =  res.peopleAtStop5m[stopNo] + 1
+                if lineFreq > 60  and waitTime > lineFreq * 1.5 then
+                    res.peopleAtStopLongWait[stopNo] =  res.peopleAtStopLongWait[stopNo] + 1
                 end
             end
         end 
@@ -347,16 +364,6 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
                 res.inVehCount = res.inVehCount + 1
             end
         end
-
-        -- Walking towards terminal
-        -- if simEntityMoving then      
-        --     if simEntityMoving.line == lineId then      
-        --         --res.totalCount = res.totalCount + 1
-        --         --res.atStopCount = res.atStopCount + 1
-        --         local stopNo = simEntityMoving.lineStop0
-        --         res.peopleMoving[stopNo] = res.peopleMoving[stopNo] + 1
-        --     end
-        -- end
     end
 
     for stopNo, count in pairs(res.peopleAtStop) do

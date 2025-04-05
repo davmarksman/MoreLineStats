@@ -363,10 +363,11 @@ function lineStatsGUI.fillStationTable(lineID)
     menu.stationTable:deleteAll()
 
     local vehicleType = timetableHelper.getLineType(lineID)
+    local lineFreq = timetableHelper.getFrequency(lineID)
 
     -- Header
     local passengerStats = lineStatsHelper.getPassengerStatsForLine(lineID)
-    local lineStatsTxt = "Freq. " .. timetableHelper.getFrequency(lineID) .. "   Loaded: " .. passengerStats.inVehCount .. "/" .. passengerStats.totalCount
+    local lineStatsTxt = "Freq. " ..  lineFreq .. "   Loaded: " .. passengerStats.inVehCount .. "/" .. passengerStats.totalCount
 
     local header1 = api.gui.comp.TextView.new(lineStatsTxt)
     local header2 = api.gui.comp.TextView.new("")
@@ -449,14 +450,14 @@ function lineStatsGUI.fillStationTable(lineID)
         -- Passenger Waiting col 
         local compTotalWaiting = uiUtil.makeIconText(tostring(passengerStats.peopleAtStop[k]), "ui/hud/cargo_passengers.tga")
 
-        local comp5m
-        if (passengerStats.peopleAtStop[k] ~= passengerStats.peopleAtStop5m[k]) then
-            comp5m = uiUtil.makeIconText(tostring(passengerStats.peopleAtStop5m[k]), "ui/clock_small@2x.tga")
+        local compLongWait
+        if (passengerStats.peopleAtStopLongWait[k] > 0) then
+            compLongWait = uiUtil.makeIconText(tostring(passengerStats.peopleAtStopLongWait[k]), "ui/clock_small@2x.tga")
         else
-            comp5m = api.gui.comp.TextView.new("")
+            compLongWait = api.gui.comp.TextView.new("")
         end
         
-        local compPplWaiting =  uiUtil.makeVertical(compTotalWaiting, comp5m)
+        local compPplWaiting =  uiUtil.makeVertical(compTotalWaiting, compLongWait)
 
         -- Journey time column
         local lblJurneyTime
