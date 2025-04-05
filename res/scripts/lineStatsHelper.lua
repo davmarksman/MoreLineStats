@@ -128,6 +128,16 @@ function lineStatsHelper.getLineNameOfVehicle(vehicleID)
 end
 
 
+---@param lineId number | string
+-- returns leg Times for line
+function lineStatsHelper.getVehicles(lineId)
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return {} end
+
+    local vehiclesForLine = api.engine.system.transportVehicleSystem.getLineVehicles(lineId)
+    return vehiclesForLine
+end
+
 
 
 

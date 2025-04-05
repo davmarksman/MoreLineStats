@@ -6,21 +6,24 @@ local gui = require "gui"
 
 local menu = {window = nil, lineTableItems = {}}
 
+-- We keep track of UI state when window opened/closed
 local UIState = {
-    currentlySelectedLineTableIndex = nil ,
-    -- currentlySelectedStationTabStation = nil
+    lastSelectedLineTableIndex = nil ,
+    lastSelectedStationIndex = nil,
+    lastSelectedFilter = nil
 }
 
 local lineStatsGUI = {}
 
--- Search Constraint
 
+-- Keeps track of where the scroll bar is so the ui scrolls to them when initialised
 local stationTableScrollOffset
 local lineTableScrollOffset
-local detailsTableScrollOffset
+-- local detailsTableScrollOffset
+local toggleBtns
 
 local function err(x)
-	print("An error was caught",x)
+	print("An error was caught", x)
 	local traceback = debug.traceback()
 	print(traceback)
  
@@ -29,6 +32,7 @@ end
 ---------------------- SETUP --------------------------------
 -------------------------------------------------------------
 
+--- Sets up UI Elements for the Line (Left) table
 function lineStatsGUI.initLineTable()
     print("initLineTable")
     if menu.scrollArea then
@@ -46,8 +50,7 @@ function lineStatsGUI.initLineTable()
     menu.lineTable:setColWidth(0,28)
 
     menu.lineTable:onSelect(function(index)
-        if not index == -1 then UIState.currentlySelectedLineTableIndex = index end
-        lineStatsGUI.fillStationTable(index)
+        lineStatsGUI.onLineSelected(index)
     end)
 
     menu.lineTable:setColWidth(1,240)
@@ -57,10 +60,31 @@ function lineStatsGUI.initLineTable()
     menu.scrollArea:setContent(menu.lineTable)
 
     lineStatsGUI.fillLineTable()
-
     UIState.boxLayoutLines:addItem(menu.scrollArea,0,1)
+
+    lineStatsGUI.scrollToLastLinePosition(lineTableScrollOffset)
 end
 
+--- QOL: This selects/scrolls to the last selected Line
+function lineStatsGUI.scrollToLastLinePosition(offset)
+    menu.scrollArea:invokeLater( function () 
+        menu.scrollArea:invokeLater(function () 
+            menu.scrollArea:setScrollOffset(offset)
+        end) 
+    end)
+
+    if UIState.lastSelectedLineTableIndex then
+        if UIState.lastSelectedFilter then
+            lineStatsGUI.filterToLinesOfType(UIState.lastSelectedFilter, toggleBtns)
+        end
+
+        if menu.lineTable:getNumRows() > UIState.lastSelectedLineTableIndex and not(menu.lineTable:getNumRows() == 0) then
+            menu.lineTable:select(UIState.lastSelectedLineTableIndex, false) -- false so we don't trigger the event
+        end
+    end
+end
+
+--- Sets up UI Elements for the Station (Middle) table
 function lineStatsGUI.initStationTable()
     if menu.stationScrollArea then
         local tmp = menu.stationScrollArea:getScrollOffset()
@@ -86,25 +110,31 @@ function lineStatsGUI.initStationTable()
     UIState.boxLayoutLines:addItem(menu.stationScrollArea,0.5,0)
 end
 
-function lineStatsGUI.initDetailsTable()
+--- Sets up UI Elements for the Details Area (Right) table
+function lineStatsGUI.initDetailsArea()
     if menu.scrollAreaDetails then
-        local tmp = menu.scrollAreaDetails:getScrollOffset()
-        detailsTableScrollOffset = api.type.Vec2i.new(tmp.x, tmp.y)
         UIState.boxLayoutLines:removeItem(menu.scrollAreaDetails)
-    else
-        detailsTableScrollOffset = api.type.Vec2i.new()
+        UIState.boxLayoutLines:removeItem(menu.scrollAreaVeh)
     end
 
+    menu.scrollAreaVeh = api.gui.comp.ScrollArea.new(api.gui.comp.TextView.new('scrollAreaVeh'), "lineStatsg.scrollAreaVeh")
+    menu.scrollAreaVeh:setMinimumSize(api.gui.util.Size.new(300, 300))
+    menu.scrollAreaVeh:setMaximumSize(api.gui.util.Size.new(300, 300))
+    
+    menu.lineVehTable = api.gui.comp.Table.new(1, 'SINGLE')
+    menu.scrollAreaVeh:setContent(menu.lineVehTable)
+
     menu.scrollAreaDetails = api.gui.comp.ScrollArea.new(api.gui.comp.TextView.new('scrollAreaDetails'), "lineStatsg.scrollAreaDetails")
+    menu.scrollAreaDetails:setMinimumSize(api.gui.util.Size.new(300, 300))
+    menu.scrollAreaDetails:setMaximumSize(api.gui.util.Size.new(300, 300))
+    
     menu.detailsTable = api.gui.comp.Table.new(2, 'SINGLE')
     menu.detailsTable:setColWidth(0,60)
-
-    menu.scrollAreaDetails:setMinimumSize(api.gui.util.Size.new(300, 600))
-    menu.scrollAreaDetails:setMaximumSize(api.gui.util.Size.new(300, 600))
     menu.scrollAreaDetails:setContent(menu.detailsTable)
-    UIState.boxLayoutLines:addItem(menu.scrollAreaDetails,1,0)
-end
 
+    UIState.boxLayoutLines:addItem(menu.scrollAreaVeh,1,0)
+    UIState.boxLayoutLines:addItem(menu.scrollAreaDetails,1,1)
+end
 
 function lineStatsGUI.initLostTrainsTable()
     if menu.scrollAreaLostTrains then
@@ -112,13 +142,13 @@ function lineStatsGUI.initLostTrainsTable()
     end
 
     menu.scrollAreaLostTrains = api.gui.comp.ScrollArea.new(api.gui.comp.TextView.new('scrollAreaLostTrains'), "lineStatsg.scrollAreaLostTrains")
+    menu.scrollAreaLostTrains:setMinimumSize(api.gui.util.Size.new(1000, 600))
+    menu.scrollAreaLostTrains:setMaximumSize(api.gui.util.Size.new(1000, 600))
+
     menu.lostTrainsTable = api.gui.comp.Table.new(3, 'SINGLE')
     menu.lostTrainsTable:setColWidth(0,300)
     menu.lostTrainsTable:setColWidth(1,300)
     menu.lostTrainsTable:setColWidth(2,200)
-
-    menu.scrollAreaLostTrains:setMinimumSize(api.gui.util.Size.new(1000, 600))
-    menu.scrollAreaLostTrains:setMaximumSize(api.gui.util.Size.new(1000, 600))
     menu.scrollAreaLostTrains:setContent(menu.lostTrainsTable)
 
     lineStatsGUI.fillLostLines()
@@ -126,7 +156,9 @@ function lineStatsGUI.initLostTrainsTable()
     UIState.boxLayoutLost:addItem(menu.scrollAreaLostTrains,0,1)
 end
 
-
+-------------------------------------------------------------
+---------------------- Open UI Menu ---------------------------
+-------------------------------------------------------------
 function lineStatsGUI.showLineMenu()
     if menu.window ~= nil then
         lineStatsGUI.initLineTable()
@@ -138,13 +170,12 @@ function lineStatsGUI.showLineMenu()
         floatingLayout:setId("lineStatsg.floatingLayout")
     end
     -- new floating layout to arrange all members
-
     UIState.boxLayoutLines = api.gui.util.getById('lineStatsg.floatingLayout')
     UIState.boxLayoutLines:setGravity(-1,-1)
 
     lineStatsGUI.initLineTable()
     lineStatsGUI.initStationTable()
-    lineStatsGUI.initDetailsTable()
+    lineStatsGUI.initDetailsArea()
 
     -- Setting up Line Tab
     menu.tabWidget = api.gui.comp.TabWidget.new("NORTH")
@@ -177,8 +208,8 @@ function lineStatsGUI.showLineMenu()
     menu.window:onClose(function()
         menu.lineTableItems = {}
     end)
-
 end
+
 
 -------------------------------------------------------------
 ---------------------- LOST LINES ---------------------------
@@ -200,8 +231,7 @@ function lineStatsGUI.fillLostLines()
             local lineName = lineStatsHelper.getLineNameOfVehicle(vehicleId)
     
             local lblLineName = api.gui.comp.TextView.new(lineName)
-            -- local lblVehicleName = api.gui.comp.TextView.new(vehicleName)
-            local lblVehicleName = uiUtil.makeLocateRow(vehicleId, vehicleName)
+            local lblVehicleName = uiUtil.makeLocateText(vehicleId, vehicleName)
             local timeStr = lineStatsHelper.getTimeStr(timeSinceDep)
             local lblTimeSinceDep = api.gui.comp.TextView.new(timeStr)
     
@@ -215,28 +245,28 @@ end
 ---------------------- LEFT TABLE ---------------------------
 -------------------------------------------------------------
 
-
 function lineStatsGUI.fillLineTable()
     menu.lineTable:deleteRows(0,menu.lineTable:getNumRows())
     if not (menu.lineHeader == nil) then menu.lineHeader:deleteRows(0,menu.lineHeader:getNumRows()) end
 
     menu.lineHeader = api.gui.comp.Table.new(6, 'None')
-    local sortAll   = api.gui.comp.ToggleButton.new(api.gui.comp.TextView.new("All"))
-    local sortBus   = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_road_vehicles.tga"))
-    local sortTram  = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/tram/TimetableTramIcon.tga"))
-    local sortRail  = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_trains.tga"))
-    local sortWater = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_ships.tga"))
-    local sortAir   = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_planes.tga"))
+    toggleBtns = {}
 
-    menu.lineHeader:addRow({sortAll,sortBus,sortTram,sortRail,sortWater,sortAir})
+    toggleBtns["ALL"] = api.gui.comp.ToggleButton.new(api.gui.comp.TextView.new("All"))
+    toggleBtns["ROAD"] = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_road_vehicles.tga"))
+    toggleBtns["TRAM"] = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/tram/TimetableTramIcon.tga"))
+    toggleBtns["RAIL"] = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_trains.tga"))
+    toggleBtns["WATER"] = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_ships.tga"))
+    toggleBtns["AIR"] = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_planes.tga"))
 
-    -- Col 1 line Names
+    menu.lineHeader:addRow({ toggleBtns["ALL"], toggleBtns["ROAD"], toggleBtns["TRAM"], toggleBtns["RAIL"], toggleBtns["WATER"], toggleBtns["AIR"] })
+
+    -- Fill table of lines
     local lineNames = {}
     for k,v in pairs(timetableHelper.getAllLines()) do
         local lineDot = api.gui.comp.TextView.new("●")
         local lineName = api.gui.comp.TextView.new(v.name)
         lineNames[k] = v.name
-        lineName:setName("lineStats-linename")
 
         menu.lineTableItems[#menu.lineTableItems + 1] = {lineDot, lineName}
         menu.lineTable:addRow({lineDot, lineName})
@@ -246,123 +276,92 @@ function lineStatsGUI.fillLineTable()
     menu.lineTable:setOrder(order)
 
     -- Filter Functions
-    sortAll:onToggle(function()
-        for _,v in pairs(menu.lineTableItems) do
-                v[1]:setVisible(true,false)
-                v[2]:setVisible(true,false)
-        end
-        sortBus:setSelected(false,false)
-        sortTram:setSelected(false,false)
-        sortRail:setSelected(false,false)
-        sortWater:setSelected(false,false)
-        sortAir:setSelected(false,false)
-        sortAll:setSelected(true,false)
+    toggleBtns["ALL"]:onToggle(function()        
+        lineStatsGUI.filterToLinesOfType("ALL", toggleBtns)
     end)
 
-    sortBus:onToggle(function()
-        local linesOfType = timetableHelper.isLineOfType("ROAD")
-        for k,v in pairs(menu.lineTableItems) do
-            if not(linesOfType[k] == nil) then
-                v[1]:setVisible(linesOfType[k],false)
-                v[2]:setVisible(linesOfType[k],false)
-            end
-        end
-        sortBus:setSelected(true,false)
-        sortTram:setSelected(false,false)
-        sortRail:setSelected(false,false)
-        sortWater:setSelected(false,false)
-        sortAir:setSelected(false,false)
-        sortAll:setSelected(false,false)
+    toggleBtns["ROAD"]:onToggle(function()
+        lineStatsGUI.filterToLinesOfType("ROAD", toggleBtns)
     end)
 
-    sortTram:onToggle(function()
-        local linesOfType = timetableHelper.isLineOfType("TRAM")
-        for k,v in pairs(menu.lineTableItems) do
-            if not(linesOfType[k] == nil) then
-                v[1]:setVisible(linesOfType[k],false)
-                v[2]:setVisible(linesOfType[k],false)
-            end
-        end
-        sortBus:setSelected(false,false)
-        sortTram:setSelected(true,false)
-        sortRail:setSelected(false,false)
-        sortWater:setSelected(false,false)
-        sortAir:setSelected(false,false)
-        sortAll:setSelected(false,false)
+    toggleBtns["TRAM"]:onToggle(function()
+        lineStatsGUI.filterToLinesOfType("TRAM", toggleBtns)
     end)
 
-    sortRail:onToggle(function()
-        local linesOfType = timetableHelper.isLineOfType("RAIL")
-        for k,v in pairs(menu.lineTableItems) do
-            if not(linesOfType[k] == nil) then
-                v[1]:setVisible(linesOfType[k],false)
-                v[2]:setVisible(linesOfType[k],false)
-            end
-        end
-        sortBus:setSelected(false,false)
-        sortTram:setSelected(false,false)
-        sortRail:setSelected(true,false)
-        sortWater:setSelected(false,false)
-        sortAir:setSelected(false,false)
-        sortAll:setSelected(false,false)
+    toggleBtns["RAIL"]:onToggle(function()
+        lineStatsGUI.filterToLinesOfType("RAIL", toggleBtns)
     end)
 
-    sortWater:onToggle(function()
-        local linesOfType = timetableHelper.isLineOfType("WATER")
-        for k,v in pairs(menu.lineTableItems) do
-            if not(linesOfType[k] == nil) then
-                v[1]:setVisible(linesOfType[k],false)
-                v[2]:setVisible(linesOfType[k],false)
-            end
-        end
-        sortBus:setSelected(false,false)
-        sortTram:setSelected(false,false)
-        sortRail:setSelected(false,false)
-        sortWater:setSelected(true,false)
-        sortAir:setSelected(false,false)
-        sortAll:setSelected(false,false)
+    toggleBtns["WATER"]:onToggle(function()
+        lineStatsGUI.filterToLinesOfType("WATER", toggleBtns)
     end)
 
-    sortAir:onToggle(function()
-        local linesOfType = timetableHelper.isLineOfType("AIR")
-        for k,v in pairs(menu.lineTableItems) do
-            if not(linesOfType[k] == nil) then
-                v[1]:setVisible(linesOfType[k],false)
-                v[2]:setVisible(linesOfType[k],false)
-            end
-        end
-        sortBus:setSelected(false,false)
-        sortTram:setSelected(false,false)
-        sortRail:setSelected(false,false)
-        sortWater:setSelected(false,false)
-        sortAir:setSelected(true,false)
-        sortAll:setSelected(false,false)
+    toggleBtns["AIR"]:onToggle(function()
+        lineStatsGUI.filterToLinesOfType("AIR", toggleBtns)
     end)
 
     UIState.boxLayoutLines:addItem(menu.lineHeader,0,0)
-    menu.scrollArea:invokeLater( function () menu.scrollArea:invokeLater(function () menu.scrollArea:setScrollOffset(lineTableScrollOffset) end) end)
 end
 
+
+---This filters the list of lines based on the line type
+---@param typeOfLine string
+function lineStatsGUI.filterToLinesOfType(typeOfLine, toggleButtons)
+    UIState.lastSelectedFilter = typeOfLine
+
+    if typeOfLine == "ALL" then
+        for _,v in pairs(menu.lineTableItems) do
+            v[1]:setVisible(true,false)
+            v[2]:setVisible(true,false)
+        end
+    else
+        local linesOfType = timetableHelper.isLineOfType(typeOfLine)
+        for k,v in pairs(menu.lineTableItems) do
+            if not(linesOfType[k] == nil) then
+                v[1]:setVisible(linesOfType[k],false)
+                v[2]:setVisible(linesOfType[k],false)
+            end
+        end
+    end
+
+    -- set all other toggle buttons as unselected
+    for _, toggleButton in pairs(toggleButtons) do
+        toggleButton:setSelected(false,false)
+    end
+    -- set only the selected toggle Button as selected
+    if toggleButtons[typeOfLine] then
+        toggleButtons[typeOfLine]:setSelected(true,false)
+    end
+end
 
 
 -------------------------------------------------------------
 ---------------------- Middle TABLE -------------------------
 -------------------------------------------------------------
 
--- params
--- index: index of currently selected line
-function lineStatsGUI.fillStationTable(index)
-    print("fillStationTable" .. index)
-    --initial checks
+function lineStatsGUI.onLineSelected(index)
+    print("onLineTableIdxSelected " .. index)
+    
+    -- initial checks
     if not index then return end
-    if not(timetableHelper.getAllLines()[index+1]) or (not menu.stationTable)then return end
+    if not index == -1 then UIState.lastSelectedLineTableIndex = index end
+
+    local allLines = timetableHelper.getAllLines()
+    if not(allLines[index+1]) then return end
 
 
+    local lineId = allLines[index+1].id
+
+    lineStatsGUI.fillStationTable(lineId)
+    lineStatsGUI.fillLineVehTable(lineId)
+end
+
+function lineStatsGUI.fillStationTable(lineID)
     -- initial cleanup
+    if not(menu.stationTable) then return end
+    
     menu.stationTable:deleteAll()
 
-    UIState.currentlySelectedLineTableIndex = index
-    local lineID = timetableHelper.getAllLines()[index+1].id
     local vehicleType = timetableHelper.getLineType(lineID)
 
     -- Header
@@ -382,6 +381,8 @@ function lineStatsGUI.fillStationTable(index)
     local stationLegTimes = lineStatsHelper.getLegTimes(lineID)
 
     for k, v in pairs(stationsList) do
+
+        -- Vehicles on Line image
         menu.lineImage = {}
         local vehiclePositions = timetableHelper.getTrainLocations(lineID)
         if vehiclePositions[k-1] then
@@ -437,33 +438,25 @@ function lineStatsGUI.fillStationTable(index)
         stationNumber:setStyleClassList({"timetable-stationcolour"})
         stationNumber:setMinimumSize(api.gui.util.Size.new(30, 30))
 
-        -- local lblStartStationName = api.gui.comp.TextView.new(station.name)
-        -- lblStartStationName:setName("stationName")
-        -- local lblEndStationName = api.gui.comp.TextView.new("-> " .. nextStation.name)
-        -- lblEndStationName:setName("endStationName")
-
         -- Station Col
-        local stationNameTable = api.gui.comp.Table.new(1, 'NONE')
-        stationNameTable:addRow({uiUtil.makeLocateRow(station.id, station.name)})
-        stationNameTable:addRow({uiUtil.makeLocateRow(nextStation.id, "-> " .. nextStation.name)})
-        stationNameTable:setColWidth(0,260)
+        local lblStartStn = uiUtil.makeLocateText(station.id, station.name)
+        local lblEndStn = uiUtil.makeLocateText(nextStation.id, "> " .. nextStation.name)
+        local compStationNames =  uiUtil.makeVertical(lblStartStn, lblEndStn)
 
         -- Wait time col
         local lblAvgWaitTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(passengerStats.stopAvgWaitTimes[k]))
 
-        -- Passenger Waiting col
-        local waitPassengerTable = api.gui.comp.Table.new(2, 'SINGLE')
-        waitPassengerTable:setColWidth(0,30)
+        -- Passenger Waiting col 
+        local compTotalWaiting = uiUtil.makeIconText(tostring(passengerStats.peopleAtStop[k]), "ui/hud/cargo_passengers.tga")
 
-        local personIcon = api.gui.comp.ImageView.new("ui/hud/cargo_passengers.tga")
-        local lblPeopleWaiting = api.gui.comp.TextView.new(tostring(passengerStats.peopleAtStop[k]))
-        waitPassengerTable:addRow({personIcon,lblPeopleWaiting})
-
-        if(passengerStats.peopleAtStop[k] ~= passengerStats.peopleAtStop5m[k]) then
-            local label5m = api.gui.comp.TextView.new("")
-            local lblPeopleAtStop5m= api.gui.comp.TextView.new(tostring(passengerStats.peopleAtStop5m[k]))
-            waitPassengerTable:addRow({label5m,lblPeopleAtStop5m})
+        local comp5m
+        if (passengerStats.peopleAtStop[k] ~= passengerStats.peopleAtStop5m[k]) then
+            comp5m = uiUtil.makeIconText(tostring(passengerStats.peopleAtStop5m[k]), "ui/clock_small@2x.tga")
+        else
+            comp5m = api.gui.comp.TextView.new("")
         end
+        
+        local compPplWaiting =  uiUtil.makeVertical(compTotalWaiting, comp5m)
 
         -- Journey time column
         local lblJurneyTime
@@ -472,29 +465,39 @@ function lineStatsGUI.fillStationTable(index)
         else
             lblJurneyTime = api.gui.comp.TextView.new("")
         end
-        menu.stationTable:addRow({stationNumber,stationNameTable, lblAvgWaitTime,waitPassengerTable,lblJurneyTime, menu.lineImage[k]})
+        
+        menu.stationTable:addRow({stationNumber, compStationNames, lblAvgWaitTime, compPplWaiting, lblJurneyTime, menu.lineImage[k]})
     end
 
     menu.stationTable:onSelect(function (tableIndex)
         if not (tableIndex == -1) then
-            print("On Line click " .. lineID)
-            lineStatsGUI.initDetailsTable()
+            UIState.lastSelectedStationIndex = tableIndex
             lineStatsGUI.fillDetailsTable(tableIndex,lineID)
         end
-
     end)
 
-
-    menu.stationScrollArea:invokeLater(
-        function () menu.stationScrollArea:invokeLater(
-            function () menu.stationScrollArea:setScrollOffset(stationTableScrollOffset) end) end)
+    lineStatsGUI.scrollToLastStationPosition(stationTableScrollOffset)
 end
 
+--- QOL: This selects/scrolls to the last selected station
+function lineStatsGUI.scrollToLastStationPosition(offset)
+    if UIState.lastSelectedStationIndex then
+        if menu.stationTable:getNumRows() > UIState.lastSelectedStationIndex and not(menu.stationTable:getNumRows() == 0) then
+            print("Scroll To last station")
+            menu.stationTable:select(UIState.lastSelectedStationIndex, true) -- true to trigger event
+        end
+    end
+
+    menu.stationScrollArea:invokeLater(function () 
+        menu.stationScrollArea:invokeLater(function () 
+            menu.stationScrollArea:setScrollOffset(offset) 
+        end) 
+    end)
+end
 
 -------------------------------------------------------------
 ---------------------- Right TABLE --------------------------
 -------------------------------------------------------------
-
 function lineStatsGUI.clearDetailsWindow()
     menu.detailsTable:deleteRows(1, menu.detailsTable:getNumRows())
 end
@@ -532,6 +535,22 @@ function lineStatsGUI.fillDetailsTable(index,lineID)
     end
 end
 
+--- Displays all vehicles on the line in a table
+function lineStatsGUI.fillLineVehTable(lineId)
+    if not(menu.lineVehTable) then return end
+    menu.lineVehTable:deleteAll()
+    
+    local headerRow = api.gui.comp.TextView.new("Vehicles")
+    menu.lineVehTable:addRow({headerRow})
+
+    local vehiclesForLine = lineStatsHelper.getVehicles(lineId)
+    for _, vehicleId in pairs(vehiclesForLine) do
+        local vehicleName = lineStatsHelper.getVehicleName(vehicleId)
+        local vehicleLocateRow = uiUtil.makeLocateText(vehicleId, vehicleName)
+        menu.lineVehTable:addRow({vehicleLocateRow})
+    end
+end
+
 
 -------------------------------------------------------------
 --------------------- Main Entry ---------------------------------
@@ -545,7 +564,7 @@ local function createComponents()
 
     local noOfPeople = api.engine.system.simPersonSystem.getCount()
     if peoplestate and noOfPeople then
-        peoplestate:setText(tostring(noOfPeople))
+        peoplestate:setText("Pop: " .. tostring(noOfPeople))
     end
 
     local buttonLabel = gui.textView_create("gameInfo.linestats.label", "Line Stats")
