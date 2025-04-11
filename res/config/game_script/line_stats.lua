@@ -33,8 +33,7 @@ end
 -------------------------------------------------------------
 
 --- Sets up UI Elements for the Line (Left) table
-function lineStatsGUI.initLineTable()
-    print("initLineTable")
+function lineStatsGUI.initLineTable() 
     if menu.scrollArea then
         local tmp = menu.scrollArea:getScrollOffset()
         lineTableScrollOffset = api.type.Vec2i.new(tmp.x, tmp.y)
@@ -66,7 +65,7 @@ function lineStatsGUI.initLineTable()
 end
 
 --- QOL: This selects/scrolls to the last selected Line
-function lineStatsGUI.scrollToLastLinePosition(offset)
+function lineStatsGUI.scrollToLastLinePosition(offset)  
     menu.scrollArea:invokeLater( function () 
         menu.scrollArea:invokeLater(function () 
             menu.scrollArea:setScrollOffset(offset)
@@ -160,6 +159,7 @@ end
 ---------------------- Open UI Menu ---------------------------
 -------------------------------------------------------------
 function lineStatsGUI.showLineMenu()
+    print("-- showLineMenu --")
     if menu.window ~= nil then
         lineStatsGUI.initLineTable()
         lineStatsGUI.initLostTrainsTable()
@@ -344,7 +344,9 @@ function lineStatsGUI.onLineSelected(index)
     
     -- initial checks
     if not index then return end
-    if not index == -1 then UIState.lastSelectedLineTableIndex = index end
+    if index ~= -1 then 
+        UIState.lastSelectedLineTableIndex = index
+    end
 
     local allLines = timetableHelper.getAllLines()
     if not(allLines[index+1]) then return end
@@ -403,26 +405,36 @@ function lineStatsGUI.fillStationTable(lineID)
 		else
             menu.lineImage[k] = api.gui.comp.ImageView.new("ui/timetable_line.tga")
         end
+        
+        local count = 0
         local x = menu.lineImage[k]
+
+        --  onStep is the update callback that is called in every step. (see: https://www.transportfever2.com/wiki/doku.php?id=modding:userinterface)
         menu.lineImage[k]:onStep(function()
             if not x then print("ERRROR") return end
-            local vehiclePositions2 = timetableHelper.getTrainLocations(lineID)
-            if vehiclePositions2[k-1] then
-				if vehiclePositions2[k-1].atTerminal then
-					if vehiclePositions2[k-1].countStr == "MANY" then
-						x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga", false)
-					else
-						x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga", false)
-					end
-				else
-					if vehiclePositions2[k-1].countStr == "MANY" then
-						x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga", false)
-					else
-						x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route.tga", false)
-					end
-				end
-			else
-                x:setImage("ui/timetable_line.tga", false)
+            if not count then  print("ERRROR") return end
+
+            -- This gets executed too frequently. This if reduces it to roughly once every 3 seconds. Varies based on frame rate
+            count = count + 1
+            if count % 100 == 0 then
+                local vehiclePositions2 = timetableHelper.getTrainLocations(lineID)
+                if vehiclePositions2[k-1] then
+                    if vehiclePositions2[k-1].atTerminal then
+                        if vehiclePositions2[k-1].countStr == "MANY" then
+                            x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga", false)
+                        else
+                            x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga", false)
+                        end
+                    else
+                        if vehiclePositions2[k-1].countStr == "MANY" then
+                            x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga", false)
+                        else
+                            x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route.tga", false)
+                        end
+                    end
+                else
+                    x:setImage("ui/timetable_line.tga", false)
+                end
             end
         end)
 
@@ -484,7 +496,6 @@ end
 function lineStatsGUI.scrollToLastStationPosition(offset)
     if UIState.lastSelectedStationIndex then
         if menu.stationTable:getNumRows() > UIState.lastSelectedStationIndex and not(menu.stationTable:getNumRows() == 0) then
-            print("Scroll To last station")
             menu.stationTable:select(UIState.lastSelectedStationIndex, true) -- true to trigger event
         end
     end

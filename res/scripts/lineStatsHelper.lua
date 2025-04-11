@@ -352,7 +352,10 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
                 res.peopleAtStop[stopNo] = res.peopleAtStop[stopNo] + 1
                 local waitTime = gameTime - lineStatsHelper.getTimeInSecs(simEntityAtTerminal.arrivalTime)
                 stopWaitTimes[stopNo] = stopWaitTimes[stopNo] + waitTime
-                if lineFreq > 60  and waitTime > lineFreq * 1.5 then
+                if lineFreq > 60  and waitTime > lineFreq + 60 then
+                    res.peopleAtStopLongWait[stopNo] =  res.peopleAtStopLongWait[stopNo] + 1
+                elseif lineFreq < 60 and waitTime > 5 * 60 then
+                    -- Default to 5 min if no line frequency
                     res.peopleAtStopLongWait[stopNo] =  res.peopleAtStopLongWait[stopNo] + 1
                 end
             end
