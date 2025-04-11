@@ -29,7 +29,6 @@ end
 ---returns text next to a  icon
 function uiUtil.makeIconText(text, iconLoc)
 	local personIcon = api.gui.comp.ImageView.new(iconLoc)
-	personIcon:setMinimumSize(api.gui.util.Size.new( 40, 40 ))
 	personIcon:setMaximumSize(api.gui.util.Size.new( 40, 40 ))
 	return uiUtil.makeHorizontal(personIcon, api.gui.comp.TextView.new(text))
 end	
