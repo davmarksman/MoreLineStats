@@ -20,12 +20,13 @@ This lightweight mod provides more statistic information about passenger lines. 
 
 LINES
 This shows show additonal stats about lines. Only useful for passenger lines:
-- How many passengers are waiting at a stop
-- How many passengers arrived within the last 5 minutes
 - Average passenger waiting time
-- Passengers waiting vs travelling
+- How many passengers are waiting at a stop
+- How many passengers have been waiting for longer than the line frequency (plus 1 minute in case of delays)
+- Passengers travelling on the line vs waiting
 - Leg times between stops
 - Competing lines (speed is the biggest deciding factor for which lines passengers pick. This allows you to see if a line is faster and therefore getting a higher share of passengers. I've noticed that the platform chosen on larger stations can have a noticable impact.)
+- Vehicles on line
 
 LOST TRAINS
 This provides a list of potentially lost trains. Trains are thought to be lost when they've been travelling for longer than 2x the maximum leg time or 3x the average leg time between stations
@@ -38,9 +39,19 @@ OTHER
 CREDITS
 - The ui and some helper functions are based off Celmi's Timetables mod
 - The locate pins and functionality for that from is taken form statistics++ by okeating. Do check that out if you want more in-depth statistics
+- Omegamezle for icons for each vehicle type
 
 REPO
 https://github.com/davmarksman/MoreLineStats
+
+---
+
+UPDATE 1.1
+- Icons for each transport mode. Thanks to omegamezle
+- Change from How many passengers arrived within the last 5 minutes to passengers waiting longer than Line frequency
+- Added a list of Vehicles on the line
+- Some QOL and usability fixes
+- Know issue: vehicles on line 
 ]]),
 		},
 	}
