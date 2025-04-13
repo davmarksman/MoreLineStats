@@ -47,7 +47,7 @@ https://github.com/davmarksman/MoreLineStats
 ---
 
 UPDATE 1.1
-- Icons for each transport mode. Thanks to omegamezle
+- Icons for each transport mode. Thanks to omegamezle/Mezzie
 - Change from How many passengers arrived within the last 5 minutes to passengers waiting longer than Line frequency
 - Added a list of Vehicles on the line
 - Some QOL and usability fixes
