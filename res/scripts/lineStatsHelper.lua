@@ -129,7 +129,7 @@ end
 
 
 ---@param lineId number | string
--- returns vehicles for line
+-- returns [vehicleId] arr - vehicles for line 
 function lineStatsHelper.getVehicles(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return {} end
@@ -139,6 +139,103 @@ function lineStatsHelper.getVehicles(lineId)
 end
 
 
+
+---@param lineId number | string
+---@param lineStopIdx number
+---returns [vehicleId] arr - vehicles which are in the start stop or between the start stop and the next stop
+function lineStatsHelper.getVehiclesForSection(lineId, lineStopIdx)
+    local vehicleLocs = lineStatsHelper.getVehicleLocations(lineId)
+
+    local res = {}
+    if vehicleLocs[lineStopIdx] then 
+        for _, value in pairs(vehicleLocs[lineStopIdx]) do
+            table.insert(res, value.vehicleId)
+        end
+    end
+    
+    return res
+end
+
+
+---@param lineId any
+---returns [key: lineStopIdx: value: "SINGLE_MOVING" | "SINGLE_AT_TERMINAL" | "MANY_MOVING" | "MANY_AT_TERMINAL" | "MOVING_AND_AT_TERMINAL"]
+---Note sparse array so a line stop idx may not be present
+function lineStatsHelper.getAggregatedVehLocs(lineId)
+    local res = {}
+
+    local vehicleLocs = lineStatsHelper.getVehicleLocations(lineId)
+    for lineStopIdx, vehicleAtStopDets in pairs(vehicleLocs) do
+        local atTermCount = 0
+        local movingCount = 0
+        for _, vehDetails in pairs(vehicleAtStopDets) do
+            if vehDetails.atTerminal == true then
+                atTermCount = atTermCount + 1
+            else 
+                movingCount = movingCount + 1
+            end
+        end
+        
+        if movingCount > 0 and atTermCount > 0 then
+            res[lineStopIdx] = "MOVING_AND_AT_TERMINAL"
+        elseif movingCount == 1 then
+            res[lineStopIdx] = "SINGLE_MOVING"
+        elseif movingCount > 1 then
+            res[lineStopIdx] = "MANY_MOVING"
+        elseif atTermCount == 1 then
+            res[lineStopIdx] = "SINGLE_AT_TERMINAL"
+        elseif atTermCount > 1 then
+            res[lineStopIdx] = "MANY_AT_TERMINAL" 
+        else
+            res[lineStopIdx] = "ERR"
+        end
+    end
+
+    return res
+end
+
+---@param lineId number | string
+---returns [key: lineStopIdx, value: [{vehicleId:number, atTerminal:boolean]]. 
+---Note sparse array so a line stop idx may not be present
+function lineStatsHelper.getVehicleLocations(lineId)
+    -- vehicle.stopIndex is 0 based, while lineStopIdx is 1 based (from api.engine.getComponent(line, api.type.ComponentType.LINE))
+    -- Given:
+    -- Line stop idx 1 = Station B
+    -- Line stop idx 2 = Station A
+    -- When the vehicle is:
+    --   . atTerminal at A. Vehicle stop Idx = 0. Want lineIdx = 1
+    --   -> Heading from A to B. Vehicle stop Idx = 1. Want lineIdx = 1 (we are between stop 1 & 2)
+    --   . atTerminal at B. Vehicle stop Idx = 1. Want lineIdx = 2
+    --   -> Heading from B and A. Vehicle stop Idx = 0. Want lineIdx = 2 (the last stop on the line)
+
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return {} end
+
+    local vehiclesForLine = api.engine.system.transportVehicleSystem.getLineVehicles(lineId)
+    local lastStopOnLineIdx = #timetableHelper.getAllStations(lineId)
+    local res = {}
+
+    for _,vehicleId in pairs(vehiclesForLine) do
+        local vehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
+        local atTerminal = vehicle.state == api.type.enum.TransportVehicleState.AT_TERMINAL
+
+        local lineStopIdx = vehicle.stopIndex
+        if atTerminal == true then
+            lineStopIdx = vehicle.stopIndex + 1
+        elseif vehicle.stopIndex == 0 then
+            lineStopIdx = lastStopOnLineIdx
+        end
+        
+        if not res[lineStopIdx] then
+            res[lineStopIdx] = {}
+        end
+        table.insert(res[lineStopIdx], {
+            vehicleId = vehicleId,
+            atTerminal = atTerminal
+        })
+    end
+
+    return res
+end
 
 
 -------------------------------------------------------------
@@ -194,13 +291,13 @@ function lineStatsHelper.getSectionTimesFromVeh(vehicleId)
 end
 
 
----@param line number | string
+---@param lineId number | string
 -- returns lineFrequency : String, formatted '%M:%S'
-function lineStatsHelper.getFrequencyNum(line)
-    if type(line) == "string" then line = tonumber(line) end
-    if not(type(line) == "number") then return "ERROR" end
+function lineStatsHelper.getFrequencyNum(lineId)
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return "ERROR" end
 
-    local lineEntity = game.interface.getEntity(line)
+    local lineEntity = game.interface.getEntity(lineId)
     if lineEntity and lineEntity.frequency then
         if lineEntity.frequency == 0 then return 0 end
         return 1 / lineEntity.frequency
@@ -208,6 +305,26 @@ function lineStatsHelper.getFrequencyNum(line)
         return 0
     end
 end
+
+---@param lineId number | string
+---@param stopIdx number
+---@return number - the next stop idx. -1 if it can't find the next stop index
+function lineStatsHelper.getNextStop(lineId, stopIdx)
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return "ERROR" end 
+
+    local stations = timetableHelper.getAllStations(lineId)
+    if stopIdx < 1 or stopIdx > #stations then
+        return -1
+    end
+
+    if stopIdx == #stations then
+        return 1
+    else
+        return stopIdx + 1
+    end
+end
+
 
 -------------------------------------------------------------
 ---------------------- Station related ----------------------
@@ -272,11 +389,11 @@ function lineStatsHelper.getTimeBetweenStations(lineId, startStationId, endStati
         end
     end
 
-    for _, sidx in pairs(startStopNos) do
-        for _, eidx in pairs(endStopNos) do
-            local i = sidx
+    for _, startIdx in pairs(startStopNos) do
+        for _, endIdx in pairs(endStopNos) do
+            local i = startIdx
             local totalTime = 0
-            while i ~= eidx do
+            while i ~= endIdx do
                 if (stationLegTime[i]) then
                     local legTime = stationLegTime[i]
                     if type(legTime) == "string" then legTime = tonumber(legTime) end
@@ -471,6 +588,16 @@ function lineStatsHelper.createOneBasedArray(count, defaultVal)
     return arr
 end
 
+---@param count number
+-- returns a index one based array with empty tables
+function lineStatsHelper.createOneBasedArrayTable(count)
+    local arr={}
+    for i=1,count do
+        arr[i]={}
+    end
+    return arr
+end
+
 ---@param n number
 ---@param m number
 ---@param defaultVal number | string | any
@@ -543,6 +670,24 @@ function lineStatsHelper.avgNonZeroValuesInArray(arr)
     return lineStatsHelper.safeDivide(total, count)
 end
 
+
+
+
+---https://stackoverflow.com/questions/9168058/how-to-dump-a-table-to-console
+---@param o any
+---@return string
+function lineStatsHelper.dump(o)
+    if type(o) == 'table' then
+       local s = '{ '
+       for k,v in pairs(o) do
+          if type(k) ~= 'number' then k = '"'..k..'"' end
+          s = s .. '['..k..'] = ' .. lineStatsHelper.dump(v) .. ','
+       end
+       return s .. '} '
+    else
+       return tostring(o)
+    end
+ end
 
 
 return lineStatsHelper

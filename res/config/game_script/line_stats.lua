@@ -8,7 +8,8 @@ local menu = {window = nil, lineTableItems = {}}
 
 -- We keep track of UI state when window opened/closed
 local UIState = {
-    lastSelectedLineTableIndex = nil ,
+    lastSelectedLineTableIndex = nil,
+    lastSelectedLineId = nil,
     lastSelectedStationIndex = nil,
     lastSelectedFilter = nil
 }
@@ -102,9 +103,18 @@ function lineStatsGUI.initStationTable()
     menu.stationTable:setColWidth(3,80)
     menu.stationTable:setColWidth(4,80)
     menu.stationTable:setColWidth(5,50)
+
+    menu.stationTable:onSelect(function (tableIndex)
+        if not (tableIndex == -1) and  UIState.lastSelectedLineId then
+            UIState.lastSelectedStationIndex = tableIndex
+
+            lineStatsGUI.fillDetailsTable(tableIndex, UIState.lastSelectedLineId)
+            lineStatsGUI.fillVehTableForSection(tableIndex, UIState.lastSelectedLineId)
+        end
+    end)
+
     menu.stationScrollArea:setMinimumSize(api.gui.util.Size.new(600, 600))
     menu.stationScrollArea:setMaximumSize(api.gui.util.Size.new(600, 600))
-
     menu.stationScrollArea:setContent(menu.stationTable)
     UIState.boxLayoutLines:addItem(menu.stationScrollArea,0.5,0)
 end
@@ -340,8 +350,6 @@ end
 -------------------------------------------------------------
 
 function lineStatsGUI.onLineSelected(index)
-    print("onLineTableIdxSelected " .. index)
-    
     -- initial checks
     if not index then return end
     if index ~= -1 then 
@@ -354,9 +362,11 @@ function lineStatsGUI.onLineSelected(index)
 
     local lineId = allLines[index+1].id
 
+    print("Selected LineId " .. lineId)
+    UIState.lastSelectedLineId = lineId
     lineStatsGUI.fillStationTable(lineId)
-    lineStatsGUI.fillLineVehTable(lineId)
 end
+
 
 function lineStatsGUI.fillStationTable(lineID)
     -- initial cleanup
@@ -382,71 +392,41 @@ function lineStatsGUI.fillStationTable(lineID)
     --iterate over all stations to display them
     local stationsList = timetableHelper.getAllStations(lineID)
     local stationLegTimes = lineStatsHelper.getLegTimes(lineID)
+    menu.lineImage = {}
 
-    for k, v in pairs(stationsList) do
+    for stnIdx, stnId in pairs(stationsList) do
 
-        -- Vehicles on Line image
-        menu.lineImage = {}
-        local vehiclePositions = timetableHelper.getTrainLocations(lineID)
-        if vehiclePositions[k-1] then
-			if vehiclePositions[k-1].atTerminal then
-				if vehiclePositions[k-1].countStr == "MANY" then
-					menu.lineImage[k] = api.gui.comp.ImageView.new("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga")
-				else
-					menu.lineImage[k] = api.gui.comp.ImageView.new("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga")
-				end
-			else
-				if vehiclePositions[k-1].countStr == "MANY" then
-					menu.lineImage[k] = api.gui.comp.ImageView.new("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga")
-				else
-					menu.lineImage[k] = api.gui.comp.ImageView.new("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route.tga")
-				end
-			end
-		else
-            menu.lineImage[k] = api.gui.comp.ImageView.new("ui/timetable_line.tga")
-        end
-        
+        -- Vehicles on Line image(s)
+        local vehiclePositions = lineStatsHelper.getAggregatedVehLocs(lineID)
+        local imageFile = uiUtil.getVehiclesOnSectionImageFile(vehiclePositions, stnIdx, vehicleType)
+        menu.lineImage[stnIdx] = api.gui.comp.ImageView.new(imageFile)
+
         local count = 0
-        local x = menu.lineImage[k]
+        local x = menu.lineImage[stnIdx]
 
         --  onStep is the update callback that is called in every step. (see: https://www.transportfever2.com/wiki/doku.php?id=modding:userinterface)
-        menu.lineImage[k]:onStep(function()
+        menu.lineImage[stnIdx]:onStep(function()
             if not x then print("ERRROR") return end
             if not count then  print("ERRROR") return end
 
-            -- This gets executed too frequently. This if reduces it to roughly once every 3 seconds. Varies based on frame rate
+            -- This gets executed too frequently. This reduces it to roughly once every 3 seconds. Varies based on frame rate
             count = count + 1
             if count % 100 == 0 then
-                local vehiclePositions2 = timetableHelper.getTrainLocations(lineID)
-                if vehiclePositions2[k-1] then
-                    if vehiclePositions2[k-1].atTerminal then
-                        if vehiclePositions2[k-1].countStr == "MANY" then
-                            x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga", false)
-                        else
-                            x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga", false)
-                        end
-                    else
-                        if vehiclePositions2[k-1].countStr == "MANY" then
-                            x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga", false)
-                        else
-                            x:setImage("ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route.tga", false)
-                        end
-                    end
-                else
-                    x:setImage("ui/timetable_line.tga", false)
-                end
+                local vehiclePositions2 = lineStatsHelper.getAggregatedVehLocs(lineID)
+                local imageFile2 = uiUtil.getVehiclesOnSectionImageFile(vehiclePositions2, stnIdx, vehicleType)
+                x:setImage(imageFile2, false)
             end
         end)
 
-        local station = timetableHelper.getStationNameWithId(v)
+        local station = timetableHelper.getStationNameWithId(stnId)
         local nextStation
-        if stationsList[k + 1] then
-            nextStation = timetableHelper.getStationNameWithId(stationsList[k + 1] )
+        if stationsList[stnIdx + 1] then
+            nextStation = timetableHelper.getStationNameWithId(stationsList[stnIdx + 1] )
         else
             nextStation =  timetableHelper.getStationNameWithId(stationsList[1])
         end
 
-        local stationNumber = api.gui.comp.TextView.new(tostring(k))
+        local stationNumber = api.gui.comp.TextView.new(tostring(stnIdx))
 
         stationNumber:setStyleClassList({"timetable-stationcolour"})
         stationNumber:setMinimumSize(api.gui.util.Size.new(30, 30))
@@ -457,14 +437,14 @@ function lineStatsGUI.fillStationTable(lineID)
         local compStationNames =  uiUtil.makeVertical(lblStartStn, lblEndStn)
 
         -- Wait time col
-        local lblAvgWaitTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(passengerStats.stopAvgWaitTimes[k]))
+        local lblAvgWaitTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(passengerStats.stopAvgWaitTimes[stnIdx]))
 
         -- Passenger Waiting col 
-        local compTotalWaiting = uiUtil.makeIconText(tostring(passengerStats.peopleAtStop[k]), "ui/hud/cargo_passengers.tga")
+        local compTotalWaiting = uiUtil.makeIconText(tostring(passengerStats.peopleAtStop[stnIdx]), "ui/hud/cargo_passengers.tga")
 
         local compLongWait
-        if (passengerStats.peopleAtStopLongWait[k] > 0) then
-            compLongWait = uiUtil.makeIconText(tostring(passengerStats.peopleAtStopLongWait[k]), "ui/clock_small@2x.tga")
+        if (passengerStats.peopleAtStopLongWait[stnIdx] > 0) then
+            compLongWait = uiUtil.makeIconText(tostring(passengerStats.peopleAtStopLongWait[stnIdx]), "ui/clock_small@2x.tga")
         else
             compLongWait = api.gui.comp.TextView.new("")
         end
@@ -473,21 +453,15 @@ function lineStatsGUI.fillStationTable(lineID)
 
         -- Journey time column
         local lblJurneyTime
-        if (stationLegTimes and stationLegTimes[k]) then
-            lblJurneyTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(stationLegTimes[k]))
+        if (stationLegTimes and stationLegTimes[stnIdx]) then
+            lblJurneyTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(stationLegTimes[stnIdx]))
         else
             lblJurneyTime = api.gui.comp.TextView.new("")
         end
         
-        menu.stationTable:addRow({stationNumber, compStationNames, lblAvgWaitTime, compPplWaiting, lblJurneyTime, menu.lineImage[k]})
+        menu.stationTable:addRow({stationNumber, compStationNames, lblAvgWaitTime, compPplWaiting, lblJurneyTime, menu.lineImage[stnIdx]})
     end
 
-    menu.stationTable:onSelect(function (tableIndex)
-        if not (tableIndex == -1) then
-            UIState.lastSelectedStationIndex = tableIndex
-            lineStatsGUI.fillDetailsTable(tableIndex,lineID)
-        end
-    end)
 
     lineStatsGUI.scrollToLastStationPosition(stationTableScrollOffset)
 end
@@ -514,21 +488,18 @@ function lineStatsGUI.clearDetailsWindow()
     menu.detailsTable:deleteRows(1, menu.detailsTable:getNumRows())
 end
 
-function lineStatsGUI.fillDetailsTable(index,lineID)
-    -- index is 0 based
+function lineStatsGUI.fillDetailsTable(index, lineID)
+    -- index is 0 based. Stop indexes are 1 based
     menu.detailsTable:deleteAll()
-    
-    local stations = timetableHelper.getAllStations(lineID)
-    if index < 0 or index > #stations then
+    local stopIdx = index+1
+    local nextStopIdx = lineStatsHelper.getNextStop(lineID, stopIdx)
+    if nextStopIdx == -1 then
         return
     end
 
-    local nextStationIdx = index+2
-    if index == #stations -1 then
-        nextStationIdx = 1
-    end
+    local stations = timetableHelper.getAllStations(lineID)
 
-    local timesForLinesBetweenStations = lineStatsHelper.getLineTimesBetweenStation(stations[index+1], stations[nextStationIdx])
+    local timesForLinesBetweenStations = lineStatsHelper.getLineTimesBetweenStation(stations[stopIdx], stations[nextStopIdx])
     local sortedInfo = lineStatsHelper.sortByValues(timesForLinesBetweenStations)
 
     local lblEmpty = api.gui.comp.TextView.new("")
@@ -547,22 +518,25 @@ function lineStatsGUI.fillDetailsTable(index,lineID)
     end
 end
 
---- Displays all vehicles on the line in a table
-function lineStatsGUI.fillLineVehTable(lineId)
+
+--- Displays all vehicles on the section in a table
+function lineStatsGUI.fillVehTableForSection(index, lineId)
+    -- index is 0 based. Stop indexes are 1 based
+    local stopIdx = index+1
+    
     if not(menu.lineVehTable) then return end
     menu.lineVehTable:deleteAll()
     
-    local headerRow = api.gui.comp.TextView.new("Vehicles")
+    local headerRow = api.gui.comp.TextView.new("Vehicles On Section")
     menu.lineVehTable:addRow({headerRow})
 
-    local vehiclesForLine = lineStatsHelper.getVehicles(lineId)
+    local vehiclesForLine = lineStatsHelper.getVehiclesForSection(lineId, stopIdx)
     for _, vehicleId in pairs(vehiclesForLine) do
         local vehicleName = lineStatsHelper.getVehicleName(vehicleId)
         local vehicleLocateRow = uiUtil.makeLocateText(vehicleId, vehicleName)
         menu.lineVehTable:addRow({vehicleLocateRow})
     end
 end
-
 
 -------------------------------------------------------------
 --------------------- Main Entry ---------------------------------

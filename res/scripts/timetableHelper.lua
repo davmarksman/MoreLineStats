@@ -130,7 +130,7 @@ end
 
 
 ---@param line number | string
--- returns [id : Number] Array of stationIds
+-- returns [id : Number] Array of stationIds. This is a 1 based index
 function timetableHelper.getAllStations(line)
     if type(line) == "string" then line = tonumber(line) end
     if not(type(line) == "number") then return "ERROR" end

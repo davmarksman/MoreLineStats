@@ -60,4 +60,31 @@ function uiUtil.createComp(layout,item1, item2)
 	return comp
 end
 
+---Gets the correct image file location to use for a vehicles on a section of the line
+---@param vehiclePositions any
+---@param stationIdx number
+---@param vehicleType string
+---@return string
+function uiUtil.getVehiclesOnSectionImageFile(vehiclePositions, stationIdx, vehicleType)
+	if vehiclePositions[stationIdx] then
+		if vehiclePositions[stationIdx] == "MANY_AT_TERMINAL" then       
+			return  "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga"
+		elseif vehiclePositions[stationIdx] == "SINGLE_AT_TERMINAL" then 
+			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga"
+		elseif vehiclePositions[stationIdx] == "MANY_MOVING" then 
+			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga"
+		elseif vehiclePositions[stationIdx] == "SINGLE_MOVING" then 
+			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route.tga"
+		elseif vehiclePositions[stationIdx] == "MOVING_AND_AT_TERMINAL" then 
+			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many_alt.tga"
+		end
+	end
+
+	if vehicleType == "rail" then
+		return "ui/rail/test_line.tga"
+	end
+
+	return "ui/timetable_line.tga"
+end
+
 return uiUtil
