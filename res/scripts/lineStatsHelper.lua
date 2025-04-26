@@ -27,7 +27,7 @@ function lineStatsHelper.findLostTrains()
                         local maxLegTime = timetableHelper.maximumArray(lineLegTimes)
                         local avgLegTime = lineStatsHelper.avgNonZeroValuesInArray(lineLegTimes)
 
-                        if maxLegTime > 0 and timeSinceDep > 2 * maxLegTime then
+                        if maxLegTime > 0 and timeSinceDep > 1.5 * maxLegTime then
                             res[vehicleId] = timeSinceDep
                         -- Sometimes max leg time is high as train was lost and it's updated legTime to be 
                         -- how long it took lost train to find station
