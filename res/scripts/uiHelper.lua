@@ -66,6 +66,9 @@ end
 ---@param vehicleType string
 ---@return string
 function uiUtil.getVehiclesOnSectionImageFile(vehiclePositions, stationIdx, vehicleType)
+	-- temporary to get all to use train icons till get new icons
+	vehicleType = "rail"
+
 	if vehiclePositions[stationIdx] then
 		if vehiclePositions[stationIdx] == "MANY_AT_TERMINAL" then       
 			return  "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga"
