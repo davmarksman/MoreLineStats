@@ -1,5 +1,6 @@
 local lineStatsHelper = require "lineStatsHelper"
 local timetableHelper = require "timetableHelper"
+local lostTrainsHelper = require "lostTrainsHelper"
 local uiUtil = require "uiHelper"
 
 local gui = require "gui"
@@ -151,8 +152,8 @@ function lineStatsGUI.initLostTrainsTable()
     end
 
     menu.scrollAreaLostTrains = api.gui.comp.ScrollArea.new(api.gui.comp.TextView.new('scrollAreaLostTrains'), "lineStatsg.scrollAreaLostTrains")
-    menu.scrollAreaLostTrains:setMinimumSize(api.gui.util.Size.new(1000, 600))
-    menu.scrollAreaLostTrains:setMaximumSize(api.gui.util.Size.new(1000, 600))
+    menu.scrollAreaLostTrains:setMinimumSize(api.gui.util.Size.new(1000, 550))
+    menu.scrollAreaLostTrains:setMaximumSize(api.gui.util.Size.new(1000, 550))
 
     menu.lostTrainsTable = api.gui.comp.Table.new(3, 'SINGLE')
     menu.lostTrainsTable:setColWidth(0,300)
@@ -162,7 +163,12 @@ function lineStatsGUI.initLostTrainsTable()
 
     lineStatsGUI.fillLostLines()
 
+    
+    local resetLostTrainsButton = uiUtil.createButton("Reset Lost Trains")
+	resetLostTrainsButton:onClick(lostTrainsHelper.resetLostTrains)
+
     UIState.boxLayoutLost:addItem(menu.scrollAreaLostTrains,0,1)
+    UIState.boxLayoutLost:addItem(resetLostTrainsButton,0,0)
 end
 
 -------------------------------------------------------------
@@ -563,10 +569,17 @@ local function createComponents()
         end
     end)
 
+    
+    local resetAllTrainsLabel = gui.textView_create("gameInfo.linestats.resetTrainsLabel","Reset Trains In View")
+    local resetButton = gui.button_create("gameInfo.lineStat.resetTrainsButton", resetAllTrainsLabel)
+    resetButton:onClick(lostTrainsHelper.resetVisibleTrains)
+
+
     -- add elements to ui
     local gameInfoLayout = api.gui.util.getById("gameInfo"):getLayout()
     gameInfoLayout:addItem(line)
     game.gui.boxLayout_addItem("gameInfo.layout", button.id)
+    game.gui.boxLayout_addItem("gameInfo.layout", resetButton.id)
     gameInfoLayout:addItem(peoplestate)
 end
 

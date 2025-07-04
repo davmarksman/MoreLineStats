@@ -8,45 +8,65 @@ local lineStatsHelper = {}
 -------------------------------------------------------------
 
 -- returns table where index is vehicle id, and value is time since last depature
+-- Also compare last 2 financial periods. If hasn't earned any money probably problem
 function lineStatsHelper.findLostTrains()
     local gameTime = lineStatsHelper.getTime()
     local vehicles = lineStatsHelper.getAllVehiclesEnRoute()
     local res = {}
 
-    for i, vehicleId in pairs(vehicles) do
-        local vehicle = lineStatsHelper.getVehicle(vehicleId)
-        if vehicle and vehicle.carrier and vehicle.line then
-            if vehicle.carrier == api.type.enum.JournalEntryCarrier.RAIL then
-                local lastDeparture = lineStatsHelper.getLastDepartureTimeFromVeh(vehicle)
-                local timeSinceDep = gameTime - lastDeparture
+    local trains = lineStatsHelper.getTrains(vehicles)
 
-                if lastDeparture > 0 and timeSinceDep >  180 then
-                    local lineLegTimes = lineStatsHelper.getLegTimes(vehicle.line)
-                    if lineLegTimes and lineLegTimes[1] then
-                        -- Use leg times to work out if vehicle is lost
-                        local maxLegTime = timetableHelper.maximumArray(lineLegTimes)
-                        local avgLegTime = lineStatsHelper.avgNonZeroValuesInArray(lineLegTimes)
+    for vehicleId, vehicle in pairs(trains) do
+        local lastDeparture = lineStatsHelper.getLastDepartureTimeFromVeh(vehicle)
+        local timeSinceDep = gameTime - lastDeparture
 
-                        if maxLegTime > 0 and timeSinceDep > 1.5 * maxLegTime then
-                            res[vehicleId] = timeSinceDep
-                        -- Sometimes max leg time is high as train was lost and it's updated legTime to be 
-                        -- how long it took lost train to find station
-                        -- Estimate as lost using average leg time
-                        elseif maxLegTime > 8 * 60 and timeSinceDep > 3 * avgLegTime then
-                            res[vehicleId] = timeSinceDep
-                        end
-                    else
-                        -- Estimate as lost if > 10 minutes since last station
-                        if timeSinceDep > 10 * 60 then
-                            res[vehicleId] = timeSinceDep
-                        end
-                    end
+        if lastDeparture > 0 and timeSinceDep >  120 then
+            local lineLegTimes = lineStatsHelper.getLegTimes(vehicle.line)
+            if lineLegTimes and lineLegTimes[1] then
+                -- Use leg times to work out if vehicle is lost
+                local maxLegTime = timetableHelper.maximumArray(lineLegTimes)
+                local avgLegTime = lineStatsHelper.avgNonZeroValuesInArray(lineLegTimes)
+                if maxLegTime < 120 then
+                    maxLegTime = 120
+                end
+                if avgLegTime < 120 then
+                    avgLegTime = 120
+                end
+
+                if timeSinceDep > 1.5 * maxLegTime then
+                    res[vehicleId] = timeSinceDep
+                -- Sometimes max leg time is high as train was lost and it's updated legTime to be 
+                -- how long it took lost train to find station
+                -- Estimate as lost using average leg time
+                elseif avgLegTime > 0 and timeSinceDep > 3 * avgLegTime then
+                    res[vehicleId] = timeSinceDep
+                end
+            else
+                -- Estimate as lost if > 10 minutes since last station
+                if timeSinceDep > 10 * 60 then
+                    res[vehicleId] = timeSinceDep
                 end
             end
-        end 
+        end
     end
 
     return res
+end
+
+--- @param vehicleIds [string] | [number]
+--- @return table
+--- returns table with key vehicle Id, and value vehicles (api.type.ComponentType.TRANSPORT_VEHICLE, not vehicle Id)
+function lineStatsHelper.getTrains(vehicleIds)
+    local matrix={}
+    for i, vehicleId in pairs(vehicleIds) do
+        local vehicle = lineStatsHelper.getVehicle(vehicleId)
+        if vehicle and vehicle.carrier and vehicle.line then
+            if vehicle.carrier == api.type.enum.JournalEntryCarrier.RAIL then
+                matrix[vehicleId] = vehicle
+            end
+        end
+    end
+    return matrix
 end
 
 ---@param vehicleID number | string
@@ -174,13 +194,20 @@ function lineStatsHelper.getAggregatedVehLocs(lineId)
                 movingCount = movingCount + 1
             end
         end
-        
-        if movingCount > 0 and atTermCount > 0 then
-            res[lineStopIdx] = "MOVING_AND_AT_TERMINAL"
+
+        -- Both Moving and at terminal
+        if movingCount == 1 and atTermCount > 0 then
+            res[lineStopIdx] = "SINGLE_MOVING_AND_AT_TERMINAL"
+        elseif movingCount > 1 and atTermCount > 0 then
+            res[lineStopIdx] = "MANY_MOVING_AND_AT_TERMINAL"
+
+        -- Moving
         elseif movingCount == 1 then
             res[lineStopIdx] = "SINGLE_MOVING"
         elseif movingCount > 1 then
             res[lineStopIdx] = "MANY_MOVING"
+
+        -- At Terminal
         elseif atTermCount == 1 then
             res[lineStopIdx] = "SINGLE_AT_TERMINAL"
         elseif atTermCount > 1 then
@@ -688,7 +715,6 @@ function lineStatsHelper.dump(o)
        return tostring(o)
     end
  end
-
 
 return lineStatsHelper
 
