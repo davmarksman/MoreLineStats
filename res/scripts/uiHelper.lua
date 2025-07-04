@@ -67,27 +67,36 @@ end
 ---@return string
 function uiUtil.getVehiclesOnSectionImageFile(vehiclePositions, stationIdx, vehicleType)
 	-- temporary to get all to use train icons till get new icons
-	vehicleType = "rail"
-
 	if vehiclePositions[stationIdx] then
-		if vehiclePositions[stationIdx] == "MANY_AT_TERMINAL" then       
-			return  "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga"
-		elseif vehiclePositions[stationIdx] == "SINGLE_AT_TERMINAL" then 
-			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga"
-		elseif vehiclePositions[stationIdx] == "MANY_MOVING" then 
-			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga"
+
+        -- Both Moving and at terminal
+		if vehiclePositions[stationIdx] == "SINGLE_MOVING_AND_AT_TERMINAL" then 
+			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_and_station.tga"
+		elseif vehiclePositions[stationIdx] == "MANY_MOVING_AND_AT_TERMINAL" then 
+			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_and_station_many.tga"
+
+        -- Moving
 		elseif vehiclePositions[stationIdx] == "SINGLE_MOVING" then 
 			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route.tga"
-		elseif vehiclePositions[stationIdx] == "MOVING_AND_AT_TERMINAL" then 
-			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many_alt.tga"
+		elseif vehiclePositions[stationIdx] == "MANY_MOVING" then 
+			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_en_route_many.tga"
+
+        -- At Terminal
+		elseif vehiclePositions[stationIdx] == "SINGLE_AT_TERMINAL" then 
+			return "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station.tga"
+		elseif vehiclePositions[stationIdx] == "MANY_AT_TERMINAL" then       
+			return  "ui/"..vehicleType.."/timetable_line_"..vehicleType.."_in_station_many.tga"
 		end
 	end
 
-	if vehicleType == "rail" then
-		return "ui/rail/test_line.tga"
-	end
+	return "ui/new_line.tga"
+end
 
-	return "ui/timetable_line.tga"
+function uiUtil.createButton(text) 
+	local textView = api.gui.comp.TextView.new(_(text))
+	local button = api.gui.comp.Button.new(textView,false)
+	return button
 end
 
 return uiUtil
+
