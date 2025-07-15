@@ -133,7 +133,7 @@ end
 -- returns [id : Number] Array of stationIds. This is a 1 based index
 function timetableHelper.getAllStations(line)
     if type(line) == "string" then line = tonumber(line) end
-    if not(type(line) == "number") then return "ERROR" end
+    if not(type(line) == "number") then return {} end
 
     local lineObject = api.engine.getComponent(line, api.type.ComponentType.LINE)
     if lineObject and lineObject.stops then

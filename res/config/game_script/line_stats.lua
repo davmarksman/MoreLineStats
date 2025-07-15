@@ -128,15 +128,15 @@ function lineStatsGUI.initDetailsArea()
     end
 
     menu.scrollAreaVeh = api.gui.comp.ScrollArea.new(api.gui.comp.TextView.new('scrollAreaVeh'), "lineStatsg.scrollAreaVeh")
-    menu.scrollAreaVeh:setMinimumSize(api.gui.util.Size.new(300, 300))
-    menu.scrollAreaVeh:setMaximumSize(api.gui.util.Size.new(300, 300))
+    menu.scrollAreaVeh:setMinimumSize(api.gui.util.Size.new(300, 200))
+    menu.scrollAreaVeh:setMaximumSize(api.gui.util.Size.new(300, 200))
     
     menu.lineVehTable = api.gui.comp.Table.new(1, 'SINGLE')
     menu.scrollAreaVeh:setContent(menu.lineVehTable)
 
     menu.scrollAreaDetails = api.gui.comp.ScrollArea.new(api.gui.comp.TextView.new('scrollAreaDetails'), "lineStatsg.scrollAreaDetails")
-    menu.scrollAreaDetails:setMinimumSize(api.gui.util.Size.new(300, 300))
-    menu.scrollAreaDetails:setMaximumSize(api.gui.util.Size.new(300, 300))
+    menu.scrollAreaDetails:setMinimumSize(api.gui.util.Size.new(300, 400))
+    menu.scrollAreaDetails:setMaximumSize(api.gui.util.Size.new(300, 400))
     
     menu.detailsTable = api.gui.comp.Table.new(2, 'SINGLE')
     menu.detailsTable:setColWidth(0,60)
@@ -503,24 +503,47 @@ function lineStatsGUI.fillDetailsTable(index, lineID)
         return
     end
 
-    local stations = timetableHelper.getAllStations(lineID)
-
-    local timesForLinesBetweenStations = lineStatsHelper.getLineTimesBetweenStation(stations[stopIdx], stations[nextStopIdx])
-    local sortedInfo = lineStatsHelper.sortByValues(timesForLinesBetweenStations)
 
     local lblEmpty = api.gui.comp.TextView.new("")
     local lblCompetingLInes = api.gui.comp.TextView.new("Competing Lines")
     menu.detailsTable:addRow({lblEmpty, lblCompetingLInes})
-    for _, entity in pairs(sortedInfo) do
-        local elineId = entity.key
-        local time = entity.value
-        local name = timetableHelper.getLineName(elineId)
-        local timeStr = lineStatsHelper.getTimeStr(time)
 
-        local lblJurneyTime = api.gui.comp.TextView.new(timeStr)
-        local lblLineName = api.gui.comp.TextView.new(name)
+    local timesToStations = lineStatsHelper.getLineTimesFromStation(lineID, stopIdx)
 
-        menu.detailsTable:addRow({lblJurneyTime, lblLineName})
+    for _, timeToStn in pairs(timesToStations) do
+
+        local station = timetableHelper.getStationNameWithId(timeToStn.toStationId) 
+        local lblHeadFrom = api.gui.comp.TextView.new("To")
+        local shortenedStnName = station.name
+        if #shortenedStnName > 29 then
+            shortenedStnName = string.sub(station.name, 1, 27) .. "..."
+        end
+
+        local lblHeadStnName = uiUtil.makeLocateText(station.id, shortenedStnName)
+        
+
+        menu.detailsTable:addRow({lblHeadFrom, lblHeadStnName})
+        for _, competingLines in pairs(timeToStn.sortedTimes) do
+            local elineId = competingLines.key
+            local time = competingLines.value
+            local lineName = timetableHelper.getLineName(elineId)
+            local timeStr = lineStatsHelper.getTimeStr(time)
+
+            local lblJurneyTime = api.gui.comp.TextView.new(timeStr)
+            local shortenedLineName = lineName
+            if #shortenedLineName > 33 then
+                shortenedLineName = string.sub(shortenedLineName, 1, 30) .. "..."
+            end
+            local lblLineName = api.gui.comp.TextView.new(shortenedLineName)
+
+
+            menu.detailsTable:addRow({lblJurneyTime, lblLineName})
+        end
+
+
+        local lblBlank1 = api.gui.comp.TextView.new("")
+        local lblBlank2 = api.gui.comp.TextView.new("")
+        menu.detailsTable:addRow({lblBlank1, lblBlank2}) 
     end
 end
 

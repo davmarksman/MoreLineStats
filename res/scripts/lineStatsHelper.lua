@@ -341,17 +341,23 @@ function lineStatsHelper.getNextStop(lineId, stopIdx)
     if not(type(lineId) == "number") then return "ERROR" end 
 
     local stations = timetableHelper.getAllStations(lineId)
-    if stopIdx < 1 or stopIdx > #stations then
+    return lineStatsHelper.getNextStopFromStns(stopIdx, stations)
+end
+
+---@param stopIdx number
+---@param stationArr table
+---@return number - the next stop idx. -1 if it can't find the next stop index
+function lineStatsHelper.getNextStopFromStns(stopIdx, stationArr)
+    if stopIdx < 1 or stopIdx > #stationArr then
         return -1
     end
 
-    if stopIdx == #stations then
+    if stopIdx == #stationArr then
         return 1
     else
         return stopIdx + 1
     end
 end
-
 
 -------------------------------------------------------------
 ---------------------- Station related ----------------------
@@ -372,14 +378,49 @@ function timetableHelper.getStationNameWithId(stationId)
     end
 end
 
+function lineStatsHelper.getLineTimesFromStation(lineId, stopIdx)
+    local stations = timetableHelper.getAllStations(lineId)
+    local startStationId = stations[stopIdx]
+    local startStationLines = api.engine.system.lineSystem.getLineStops(startStationId)
+    local res = {}
+    local curIdx = lineStatsHelper.getNextStopFromStns(stopIdx, stations)
+    local seenStns = {}
+    seenStns[startStationId] = true
+
+    while curIdx ~= stopIdx and curIdx > 0 do
+        local toStationId = stations[curIdx]
+
+        -- If stop is seen then don't calc
+        if lineStatsHelper.tableHasKey(seenStns, toStationId) == false then
+            seenStns[toStationId] = true
+            local toStationLines = api.engine.system.lineSystem.getLineStops(toStationId)
+            local linesBetweenStation = lineStatsHelper.intersect(startStationLines, toStationLines)
+            local legRes = {}
+            for _, competingLineId in pairs(linesBetweenStation) do
+                local time = lineStatsHelper.getTimeBetweenStations(competingLineId, startStationId, toStationId)
+                legRes[competingLineId] = time
+            end
+            local noOfEntriesInTable = lineStatsHelper.tablelength(legRes)
+            if noOfEntriesInTable > 1 then
+                table.insert(res, { toStationId = toStationId, sortedTimes = lineStatsHelper.sortByValues(legRes) })
+            end
+        end
+        curIdx = lineStatsHelper.getNextStopFromStns(curIdx, stations)
+    end
+
+    return res
+end
+
+
+
 
 function lineStatsHelper.getLineTimesBetweenStation(startStationId, endStationId)
     if not startStationId or not endStationId then
         return {}
     end
 
-    local startStationLines = api.engine.system.lineSystem. getLineStops(startStationId)
-    local endStationLines = api.engine.system.lineSystem. getLineStops(endStationId)
+    local startStationLines = api.engine.system.lineSystem.getLineStops(startStationId)
+    local endStationLines = api.engine.system.lineSystem.getLineStops(endStationId)
 
 
     local linesBetweenStation = lineStatsHelper.intersect(startStationLines, endStationLines)
@@ -698,8 +739,6 @@ function lineStatsHelper.avgNonZeroValuesInArray(arr)
 end
 
 
-
-
 ---https://stackoverflow.com/questions/9168058/how-to-dump-a-table-to-console
 ---@param o any
 ---@return string
@@ -715,6 +754,17 @@ function lineStatsHelper.dump(o)
        return tostring(o)
     end
  end
+
+-- https://stackoverflow.com/questions/2705793/how-to-get-number-of-entries-in-a-lua-table
+function lineStatsHelper.tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+function lineStatsHelper.tableHasKey(table,key)
+    return table[key] ~= nil
+end
 
 return lineStatsHelper
 
