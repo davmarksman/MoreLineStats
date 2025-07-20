@@ -20,14 +20,14 @@ function lineStatsHelper.findLostTrains()
         local lastDeparture = lineStatsHelper.getLastDepartureTimeFromVeh(vehicle)
         local timeSinceDep = gameTime - lastDeparture
 
-        if lastDeparture > 0 and timeSinceDep >  120 then
+        if lastDeparture > 0 and timeSinceDep >  60 * 4 then
             local lineLegTimes = lineStatsHelper.getLegTimes(vehicle.line)
             if lineLegTimes and lineLegTimes[1] then
                 -- Use leg times to work out if vehicle is lost
                 local maxLegTime = timetableHelper.maximumArray(lineLegTimes)
                 local avgLegTime = lineStatsHelper.avgNonZeroValuesInArray(lineLegTimes)
                 if maxLegTime < 120 then
-                    maxLegTime = 120
+                    maxLegTime = 240
                 end
                 if avgLegTime < 120 then
                     avgLegTime = 120
@@ -123,10 +123,9 @@ function lineStatsHelper.isTrain(vehicleID)
     return false
 end
 
-
 ---@param vehicleID number | string
 -- returns vehicle name
-function lineStatsHelper.getVehicleName(vehicleID) 
+function lineStatsHelper.getVehicleName(vehicleID)
     if type(vehicleID) == "string" then vehicleID = tonumber(vehicleID) end
     if not(type(vehicleID) == "number") then print("Expected String or Number") return false end
 
@@ -135,6 +134,58 @@ function lineStatsHelper.getVehicleName(vehicleID)
     end)
     if err and res then return res.name else return "ERROR" end
 end
+
+---@param vehicleID number | string
+-- returns vehicle name
+function lineStatsHelper.getVehicleCapacity(vehicleID)
+    if type(vehicleID) == "string" then vehicleID = tonumber(vehicleID) end
+    if not(type(vehicleID) == "number") then print("Expected String or Number") return 0 end
+
+    local vehicle = api.engine.getComponent(vehicleID, api.type.ComponentType.TRANSPORT_VEHICLE)
+    if not vehicle or not vehicle.config or not vehicle.config.capacities then
+        return 0
+    end
+
+    local totalCapcity = 0
+    for _, cap in pairs(vehicle.config.capacities) do
+        totalCapcity = totalCapcity + cap
+    end
+    return totalCapcity
+
+end
+
+---@param vehicleID number | string
+---@param vehicle2cargoMap table
+-- returns string with vehicle passenger count / total
+function lineStatsHelper.getVehiclePassengerCount(vehicleID, vehicle2cargoMap) 
+    if type(vehicleID) == "string" then vehicleID = tonumber(vehicleID) end
+    if not(type(vehicleID) == "number") then print("Expected String or Number") return false end
+
+    local totalCapcity = lineStatsHelper.getVehicleCapacity(vehicleID)
+    
+    if not vehicle2cargoMap or #vehicle2cargoMap <= 0 then
+        return "???/" .. totalCapcity
+    end
+
+    local vehCargo = vehicle2cargoMap[vehicleID]
+    if not vehCargo or #vehCargo <= 0 then
+        return "0/" .. totalCapcity
+    end
+
+    local passengers = #vehCargo[1] -- (PASSENGERS)
+    local cargo = 0
+    for i = 2, #vehCargo do
+        cargo = cargo + #vehCargo[i]
+    end
+
+    if passengers > 0 then
+        return passengers .. "/" .. totalCapcity
+    else
+        return cargo .. "/" .. totalCapcity
+    end
+end
+
+
 
 ---@param vehicleID number | string
 -- returns returns line name of vehicel
@@ -237,7 +288,7 @@ function lineStatsHelper.getVehicleLocations(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return {} end
 
-    local vehiclesForLine = api.engine.system.transportVehicleSystem.getLineVehicles(lineId)
+    local vehiclesForLine = lineStatsHelper.getVehicles(lineId)
     local lastStopOnLineIdx = #timetableHelper.getAllStations(lineId)
     local res = {}
 
@@ -268,6 +319,20 @@ end
 -------------------------------------------------------------
 ---------------------- Line related -------------------------
 -------------------------------------------------------------
+---
+---@param lineId number | string
+-- returns Line capacity
+function lineStatsHelper.getLineCapacity(lineId)
+    local vehiclesForLine = lineStatsHelper.getVehicles(lineId)
+    local totalCapcity = 0
+    for _, vehicleId in pairs(vehiclesForLine) do
+        local capacity = lineStatsHelper.getVehicleCapacity(vehicleId)
+        totalCapcity = totalCapcity + capacity
+    end
+    return totalCapcity
+end
+
+
 
 ---@param lineId number | string
 -- returns leg Times for line
@@ -275,7 +340,7 @@ function lineStatsHelper.getLegTimes(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return {} end
 
-    local vehiclesForLine = api.engine.system.transportVehicleSystem.getLineVehicles(lineId)
+    local vehiclesForLine = lineStatsHelper.getVehicles(lineId)
     local noOfVeh = #vehiclesForLine
     local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
     local noOfStops = #lineComp.stops
@@ -322,7 +387,7 @@ end
 -- returns lineFrequency : String, formatted '%M:%S'
 function lineStatsHelper.getFrequencyNum(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
-    if not(type(lineId) == "number") then return "ERROR" end
+    if not(type(lineId) == "number") then return 0 end
 
     local lineEntity = game.interface.getEntity(lineId)
     if lineEntity and lineEntity.frequency then
@@ -501,6 +566,7 @@ end
 -- totalCount= Number
 -- waitingCount = Number
 -- inVehCount = Number
+-- lineFreq = Number, frequency of the line in seconds
 -- peopleAtStop = [Number], arr: number of people waiting at each stop
 -- peopleAtStopLongWait = [Number], arr: number of people waiting for a long time at each stop
 -- stopAvgWaitTimes = [Number], arr: average wait time at each stop
@@ -519,6 +585,8 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
     res.totalCount = 0
     res.waitingCount = 0
     res.inVehCount = 0
+    res.lineFreq = lineFreq
+    res.lineCapacity = lineStatsHelper.getLineCapacity(lineId)
     res.peopleAtStop = lineStatsHelper.createOneBasedArray(noOfStops, 0)
     res.peopleAtStopLongWait = lineStatsHelper.createOneBasedArray(noOfStops, 0)
     local stopWaitTimes = lineStatsHelper.createOneBasedArray(noOfStops, 0)

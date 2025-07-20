@@ -16,6 +16,7 @@ local UIState = {
 }
 
 local lineStatsGUI = {}
+local vehicle2cargoMapCache = {}
 
 
 -- Keeps track of where the scroll bar is so the ui scrolls to them when initialised
@@ -380,17 +381,23 @@ function lineStatsGUI.fillStationTable(lineID)
     
     menu.stationTable:deleteAll()
 
+      -- Cache the list of vehicles for use later
+    vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
+
     local vehicleType = timetableHelper.getLineType(lineID)
-    local lineFreq = timetableHelper.getFrequency(lineID)
+    -- local lineFreq = timetableHelper.getFrequency(lineID)
 
     -- Header
     local passengerStats = lineStatsHelper.getPassengerStatsForLine(lineID)
-    local lineStatsTxt = "Freq. " ..  lineFreq .. "   Loaded: " .. passengerStats.inVehCount .. "/" .. passengerStats.totalCount
+
+    local lineFreqText = lineStatsHelper.getTimeStr(passengerStats.lineFreq)
+
+    local lineStatsTxt = "Freq: " ..  lineFreqText .. " | Demand: " .. passengerStats.totalCount .. " | Cargo: " .. passengerStats.inVehCount .. "/" .. passengerStats.lineCapacity
 
     local header1 = api.gui.comp.TextView.new(lineStatsTxt)
     local header2 = api.gui.comp.TextView.new("")
     local header3 = api.gui.comp.TextView.new("Avg Wait")
-    local header4 = api.gui.comp.TextView.new("Total: " .. passengerStats.waitingCount)
+    local header4 = api.gui.comp.TextView.new("Waiting: " .. passengerStats.waitingCount)
     local header5 = api.gui.comp.TextView.new("Journey")
     local header6 = api.gui.comp.TextView.new("")
     menu.stationTable:setHeader({header1,header2, header3, header4, header5, header6})
@@ -540,12 +547,12 @@ function lineStatsGUI.fillDetailsTable(index, lineID)
             menu.detailsTable:addRow({lblJurneyTime, lblLineName})
         end
 
-
         local lblBlank1 = api.gui.comp.TextView.new("")
         local lblBlank2 = api.gui.comp.TextView.new("")
         menu.detailsTable:addRow({lblBlank1, lblBlank2}) 
     end
 end
+
 
 
 --- Displays all vehicles on the section in a table
@@ -559,10 +566,12 @@ function lineStatsGUI.fillVehTableForSection(index, lineId)
     local headerRow = api.gui.comp.TextView.new("Vehicles On Section")
     menu.lineVehTable:addRow({headerRow})
 
-    local vehiclesForLine = lineStatsHelper.getVehiclesForSection(lineId, stopIdx)
-    for _, vehicleId in pairs(vehiclesForLine) do
+    local vehiclesForSection = lineStatsHelper.getVehiclesForSection(lineId, stopIdx)
+    for _, vehicleId in pairs(vehiclesForSection) do
         local vehicleName = lineStatsHelper.getVehicleName(vehicleId)
-        local vehicleLocateRow = uiUtil.makeLocateText(vehicleId, vehicleName)
+        local vehiclePassengers = lineStatsHelper.getVehiclePassengerCount(vehicleId, vehicle2cargoMapCache)
+        
+        local vehicleLocateRow = uiUtil.makeLocateText(vehicleId, vehicleName .. " (" .. vehiclePassengers .. ")")
         menu.lineVehTable:addRow({vehicleLocateRow})
     end
 end
