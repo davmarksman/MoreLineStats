@@ -29,7 +29,8 @@ This shows show additonal stats about lines. Only useful for passenger lines:
 - Vehicles on line
 
 LOST TRAINS
-This provides a list of potentially lost trains. Trains are thought to be lost when they've been travelling for longer than 1.5x the maximum leg time or 3x the average leg time between stations
+- This provides a list of potentially lost trains. Trains are thought to be lost when they've been travelling for longer than 1.5x the maximum leg time or 3x the average leg time between stations
+- You can reset trains in view or reset all lost trains. It's advised to reset trains in view after making station/track adjustments so the trains don't get lost
 
 OTHER
 - This mod doesn't show any stats about cargo
@@ -44,6 +45,7 @@ https://github.com/davmarksman/MoreLineStats
 
 ---
 UPDATE 1.2
+- Ability to reset trains in view & reset lost trains
 - Vehicles on line section now shows the number of passengers on each vehicle
 - New icons
 - Show cargo (passengers loaded/line capacity) and demand (all passengers currently on the line)
