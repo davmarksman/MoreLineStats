@@ -42,12 +42,12 @@ CREDITS
 REPO
 https://github.com/davmarksman/MoreLineStats
 
-FUTURE PLANS
-- Icons for each transport mode. Thanks to omegamezle/Mezzie
-- Future plans include showing the rate of change at stops which will provide a line rate vs demand estimate
-- Let me know in the comments if you encounter any issues or would like to add any feature requests. 
-
 ---
+UPDATE 1.2
+- Vehicles on line section now shows the number of passengers on each vehicle
+- New icons
+- Show cargo (passengers loaded/line capacity) and demand (all passengers currently on the line)
+- Update competing lines to show competing lines for each stop from the currently selected stop
 
 UPDATE 1.1
 - Change from "How many passengers arrived within the last 5 minutes" to "Passengers waiting longer than Line frequency"
