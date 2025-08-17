@@ -1,4 +1,5 @@
 local timetableHelper = require "timetableHelper"
+local lineStatsUtils = require "lineStatsUtils"
 
 local lineStatsHelper = {}
 
@@ -10,7 +11,7 @@ local lineStatsHelper = {}
 -- returns table where index is vehicle id, and value is time since last depature
 -- Also compare last 2 financial periods. If hasn't earned any money probably problem
 function lineStatsHelper.findLostTrains()
-    local gameTime = lineStatsHelper.getTime()
+    local gameTime = lineStatsUtils.getTime()
     local vehicles = lineStatsHelper.getAllVehiclesEnRoute()
     local res = {}
 
@@ -25,7 +26,7 @@ function lineStatsHelper.findLostTrains()
             if lineLegTimes and lineLegTimes[1] then
                 -- Use leg times to work out if vehicle is lost
                 local maxLegTime = timetableHelper.maximumArray(lineLegTimes)
-                local avgLegTime = lineStatsHelper.avgNonZeroValuesInArray(lineLegTimes)
+                local avgLegTime = lineStatsUtils.avgNonZeroValuesInArray(lineLegTimes)
                 if maxLegTime < 120 then
                     maxLegTime = 240
                 end
@@ -100,8 +101,8 @@ function lineStatsHelper.getLastDepartureTimeFromVeh(lineVehicle)
     if lineVehicle and lineVehicle.lineStopDepartures then
         lastDepartureTime = timetableHelper.maximumArray(lineVehicle.lineStopDepartures)
     end
-    
-    return lineStatsHelper.getTimeInSecs(lastDepartureTime)
+
+    return lineStatsUtils.getTimeInSecs(lastDepartureTime)
 end
 
 -- returns arr:[vehicleID:number]
@@ -110,6 +111,7 @@ function lineStatsHelper.getAllVehiclesEnRoute()
 end
 
 ---@param vehicleID number | string
+---@return boolean
 -- returns bool
 function lineStatsHelper.isTrain(vehicleID) 
     if type(vehicleID) == "string" then vehicleID = tonumber(vehicleID) end
@@ -121,6 +123,22 @@ function lineStatsHelper.isTrain(vehicleID)
     end
 
     return false
+end
+
+---gets vehicle type as api.type.enum.Carrier. Defaults to 0 (ROAD) if not known
+---@param vehicleID number | string
+---@return number
+function lineStatsHelper.getVehicleType(vehicleID) 
+    if type(vehicleID) == "string" then vehicleID = tonumber(vehicleID) end
+    if not(type(vehicleID) == "number") then print("Expected String or Number") return 0 end
+
+    local lineVehicle = api.engine.getComponent(vehicleID, api.type.ComponentType.TRANSPORT_VEHICLE)
+    if lineVehicle and lineVehicle.carrier then
+        return lineVehicle.carrier
+    end
+
+    -- default to road if not known
+    return 0
 end
 
 ---@param vehicleID number | string
@@ -189,15 +207,14 @@ end
 
 ---@param vehicleID number | string
 -- returns returns line name of vehicel
-function lineStatsHelper.getLineNameOfVehicle(vehicleID) 
+function lineStatsHelper.getLineNameOfVehicle(vehicleID)
     local vehicle = lineStatsHelper.getVehicle(vehicleID)
     if vehicle and vehicle.line then
-        return timetableHelper.getLineName(vehicle.line)     
+        return timetableHelper.getLineName(vehicle.line)
     else
         return "Unknown"
     end
 end
-
 
 ---@param lineId number | string
 -- returns [vehicleId] arr - vehicles for line 
@@ -208,8 +225,6 @@ function lineStatsHelper.getVehicles(lineId)
     local vehiclesForLine = api.engine.system.transportVehicleSystem.getLineVehicles(lineId)
     return vehiclesForLine
 end
-
-
 
 ---@param lineId number | string
 ---@param lineStopIdx number
@@ -223,10 +238,9 @@ function lineStatsHelper.getVehiclesForSection(lineId, lineStopIdx)
             table.insert(res, value.vehicleId)
         end
     end
-    
+
     return res
 end
-
 
 ---@param lineId any
 ---returns [key: lineStopIdx: value: "SINGLE_MOVING" | "SINGLE_AT_TERMINAL" | "MANY_MOVING" | "MANY_AT_TERMINAL" | "MOVING_AND_AT_TERMINAL"]
@@ -302,7 +316,7 @@ function lineStatsHelper.getVehicleLocations(lineId)
         elseif vehicle.stopIndex == 0 then
             lineStopIdx = lastStopOnLineIdx
         end
-        
+    
         if not res[lineStopIdx] then
             res[lineStopIdx] = {}
         end
@@ -315,14 +329,42 @@ function lineStatsHelper.getVehicleLocations(lineId)
     return res
 end
 
-
 -------------------------------------------------------------
 ---------------------- Line related -------------------------
 -------------------------------------------------------------
----
+
+---Based off timetableHelper.getAllLines
+---Returns array [{id : number, name : String}]
+---@return table
+function lineStatsHelper.getAllPassengerLines()
+    local res = {}
+    local lines = api.engine.system.lineSystem.getLines()
+
+    for _,lineId in pairs(lines) do
+        local isPassenger = lineStatsHelper.isPassengerLine(lineId)
+        if isPassenger then
+            local lineName = api.engine.getComponent(lineId, api.type.ComponentType.NAME)
+            local lineType = lineStatsHelper.getLineTypeEnum(lineId)
+
+            if lineName and lineName.name then
+                table.insert(res, {id = lineId, name = lineName.name, lineType = lineType })
+            else
+                table.insert(res, {id = lineId, name = "ERROR", lineType = lineType})
+            end
+        end
+    end
+
+    print("Found " .. #res .. " passenger lines")
+    return res
+end
+
 ---@param lineId number | string
+---@return number
 -- returns Line capacity
 function lineStatsHelper.getLineCapacity(lineId)
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return 0 end
+
     local vehiclesForLine = lineStatsHelper.getVehicles(lineId)
     local totalCapcity = 0
     for _, vehicleId in pairs(vehiclesForLine) do
@@ -332,7 +374,60 @@ function lineStatsHelper.getLineCapacity(lineId)
     return totalCapcity
 end
 
+---returns api.type.enum.Carrier
+---@param lineId number | string
+---@return number 
+function lineStatsHelper.getLineTypeEnum(lineId)
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return 0 end
 
+
+    local vehiclesForLine = lineStatsHelper.getVehicles(lineId)
+    if vehiclesForLine and vehiclesForLine[1] then
+        return lineStatsHelper.getVehicleType(vehiclesForLine[1])
+    end
+    return 0
+end
+
+---comment 
+---@param lineId number | string
+---@return string 
+function lineStatsHelper.getLineTypeStr(lineId)
+    local lineTypes = {"RAIL", "ROAD", "TRAM", "WATER", "AIR"}
+    local lineTypeEnum = lineStatsHelper.getLineTypeEnum(lineId)
+
+	for _,currentLineType in pairs(lineTypes) do
+		if api.type.enum.Carrier[currentLineType] == lineTypeEnum then
+			return currentLineType
+		end
+	end
+
+    -- default to Road if unknown
+    return "ROAD"
+end
+
+
+---comment 
+---@param lineId number | string
+---@return boolean
+function lineStatsHelper.isPassengerLine(lineId)
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return false end
+
+    local vehiclesForLine = lineStatsHelper.getVehicles(lineId)
+    if vehiclesForLine and vehiclesForLine[1] then
+        local vehicleId = vehiclesForLine[1]
+
+        local vehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
+        if not vehicle or not vehicle.config or not vehicle.config.capacities then
+            return false
+        end
+
+        local passengers = vehicle.config.capacities[1] -- (PASSENGERS)
+        return passengers > 0
+    end
+    return false
+end
 
 ---@param lineId number | string
 -- returns leg Times for line
@@ -347,12 +442,11 @@ function lineStatsHelper.getLegTimes(lineId)
 
     -- Create a matrix[leg][vehicleLegTime]. 
     -- Legs are the first index. We then store the value for the vehicle legtimes for that leg in the second index
-    local legTimes = lineStatsHelper.createOneBasedArrayOfArrays(noOfStops, noOfVeh, 0)
-    
+    local legTimes = lineStatsUtils.createOneBasedArrayOfArrays(noOfStops, noOfVeh, 0)
+
     for vehIdx, vehicleId in pairs(vehiclesForLine) do
         local sectionTimes = lineStatsHelper.getSectionTimesFromVeh(vehicleId)
-        if sectionTimes then
-            
+        if sectionTimes then      
             -- Noticed a bug where when do `for .. pairs(sectionTimes)`, that there are sometimes additional entries and an infinite loop
             -- aka a memory leak. Can't see what's causing it as it happens on a lineIds that worked fine seconds ago
             -- We'll play defensive do a for loop on noOfStops
@@ -365,9 +459,9 @@ function lineStatsHelper.getLegTimes(lineId)
         end
     end
 
-    local toReturn = lineStatsHelper.createOneBasedArray(noOfStops, 0)
+    local toReturn = lineStatsUtils.createOneBasedArray(noOfStops, 0)
     for i=1, #legTimes do
-        toReturn[i] = lineStatsHelper.avgNonZeroValuesInArray(legTimes[i])
+        toReturn[i] = lineStatsUtils.avgNonZeroValuesInArray(legTimes[i])
     end
 
     return toReturn
@@ -382,9 +476,8 @@ function lineStatsHelper.getSectionTimesFromVeh(vehicleId)
     end
 end
 
-
 ---@param lineId number | string
--- returns lineFrequency : String, formatted '%M:%S'
+---@return number - lineFrequency
 function lineStatsHelper.getFrequencyNum(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return 0 end
@@ -406,18 +499,18 @@ function lineStatsHelper.getNextStop(lineId, stopIdx)
     if not(type(lineId) == "number") then return "ERROR" end 
 
     local stations = timetableHelper.getAllStations(lineId)
-    return lineStatsHelper.getNextStopFromStns(stopIdx, stations)
+    return lineStatsHelper.getNextStopFromStns(stopIdx, #stations)
 end
 
 ---@param stopIdx number
----@param stationArr table
+---@param noOfStations number
 ---@return number - the next stop idx. -1 if it can't find the next stop index
-function lineStatsHelper.getNextStopFromStns(stopIdx, stationArr)
-    if stopIdx < 1 or stopIdx > #stationArr then
+function lineStatsHelper.getNextStopFromStns(stopIdx, noOfStations)
+    if stopIdx < 1 or stopIdx > noOfStations then
         return -1
     end
 
-    if stopIdx == #stationArr then
+    if stopIdx == noOfStations then
         return 1
     else
         return stopIdx + 1
@@ -443,12 +536,16 @@ function timetableHelper.getStationNameWithId(stationId)
     end
 end
 
+---Gets the times for competing lines between a station and all other stations on the line
+---@param lineId number
+---@param stopIdx number
+---@return table -- array [{ toStationId , sortedTimes = table }]
 function lineStatsHelper.getLineTimesFromStation(lineId, stopIdx)
     local stations = timetableHelper.getAllStations(lineId)
     local startStationId = stations[stopIdx]
     local startStationLines = api.engine.system.lineSystem.getLineStops(startStationId)
     local res = {}
-    local curIdx = lineStatsHelper.getNextStopFromStns(stopIdx, stations)
+    local curIdx = lineStatsHelper.getNextStopFromStns(stopIdx, #stations)
     local seenStns = {}
     seenStns[startStationId] = true
 
@@ -456,28 +553,25 @@ function lineStatsHelper.getLineTimesFromStation(lineId, stopIdx)
         local toStationId = stations[curIdx]
 
         -- If stop is seen then don't calc
-        if lineStatsHelper.tableHasKey(seenStns, toStationId) == false then
+        if lineStatsUtils.tableHasKey(seenStns, toStationId) == false then
             seenStns[toStationId] = true
             local toStationLines = api.engine.system.lineSystem.getLineStops(toStationId)
-            local linesBetweenStation = lineStatsHelper.intersect(startStationLines, toStationLines)
+            local linesBetweenStation = lineStatsUtils.intersect(startStationLines, toStationLines)
             local legRes = {}
             for _, competingLineId in pairs(linesBetweenStation) do
                 local time = lineStatsHelper.getTimeBetweenStations(competingLineId, startStationId, toStationId)
                 legRes[competingLineId] = time
             end
-            local noOfEntriesInTable = lineStatsHelper.tablelength(legRes)
+            local noOfEntriesInTable = lineStatsUtils.tablelength(legRes)
             if noOfEntriesInTable > 1 then
-                table.insert(res, { toStationId = toStationId, sortedTimes = lineStatsHelper.sortByValues(legRes) })
+                table.insert(res, { toStationId = toStationId, sortedTimes = lineStatsUtils.sortByValues(legRes) })
             end
         end
-        curIdx = lineStatsHelper.getNextStopFromStns(curIdx, stations)
+        curIdx = lineStatsHelper.getNextStopFromStns(curIdx, #stations)
     end
 
     return res
 end
-
-
-
 
 function lineStatsHelper.getLineTimesBetweenStation(startStationId, endStationId)
     if not startStationId or not endStationId then
@@ -487,11 +581,10 @@ function lineStatsHelper.getLineTimesBetweenStation(startStationId, endStationId
     local startStationLines = api.engine.system.lineSystem.getLineStops(startStationId)
     local endStationLines = api.engine.system.lineSystem.getLineStops(endStationId)
 
-
-    local linesBetweenStation = lineStatsHelper.intersect(startStationLines, endStationLines)
+    local linesBetweenStation = lineStatsUtils.intersect(startStationLines, endStationLines)
 
     local res = {}
-    for _, lineId in pairs(linesBetweenStation) do   
+    for _, lineId in pairs(linesBetweenStation) do
         local time = lineStatsHelper.getTimeBetweenStations(lineId, startStationId, endStationId)
         res[lineId] = time
     end
@@ -560,6 +653,53 @@ end
 -------------------------------------------------------------
 ---------------------- Passengers Functions -------------
 -------------------------------------------------------------
+
+
+function lineStatsHelper.getLegDemands(lineId)
+    if type(lineId) == "string" then line = tonumber(lineId) end
+    if not(type(lineId) == "number") then return "ERROR" end 
+
+
+    -- array stop, travelling on segment
+    local personsForLineArr = api.engine.system.simPersonSystem.getSimPersonsForLine(lineId)
+    local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
+    local noOfStops = #lineComp.stops
+    local legCounts = lineStatsUtils.createOneBasedArray(noOfStops, 0)
+    local stations = timetableHelper.getAllStations(lineId)
+
+    for _, personId in pairs(personsForLineArr) do 
+        local simEntityAtTerminal = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
+        local simEntityAtVeh= api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_VEHICLE)
+
+        -- Waiting at terminal
+        if simEntityAtTerminal then
+            if simEntityAtTerminal.line == lineId then
+                lineStatsHelper.recordSimJourney(simEntityAtTerminal, legCounts, #stations)
+            end
+        end
+        -- On Vehicle
+        if simEntityAtVeh then     
+            if simEntityAtVeh.line == lineId then    
+                lineStatsHelper.recordSimJourney(simEntityAtVeh, legCounts, #stations)
+            end
+        end
+    end
+
+    print("Leg Counts for line " .. lineId .. ": " .. lineStatsUtils.dump(legCounts))
+    return legCounts;
+end
+
+function lineStatsHelper.recordSimJourney(simEntity, legCounts, noOfStations) 
+    local startStop = simEntity.lineStop0 + 1
+    local destStop = simEntity.lineStop1 + 1
+    local curIdx = startStop
+    while curIdx ~= destStop and curIdx > 0 do
+        legCounts[curIdx] = legCounts[curIdx] + 1
+        curIdx = lineStatsHelper.getNextStopFromStns(curIdx, noOfStations)
+    end
+end
+
+
 ---@param lineId number | string
 -- returns object
 -- Fields
@@ -574,7 +714,7 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
     if type(lineId) == "string" then line = tonumber(lineId) end
     if not(type(lineId) == "number") then return "ERROR" end 
 
-    local gameTime = lineStatsHelper.getTime()
+    local gameTime = lineStatsUtils.getTime()
     local personsForLineArr = api.engine.system.simPersonSystem.getSimPersonsForLine(lineId)
 
     local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
@@ -587,10 +727,10 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
     res.inVehCount = 0
     res.lineFreq = lineFreq
     res.lineCapacity = lineStatsHelper.getLineCapacity(lineId)
-    res.peopleAtStop = lineStatsHelper.createOneBasedArray(noOfStops, 0)
-    res.peopleAtStopLongWait = lineStatsHelper.createOneBasedArray(noOfStops, 0)
-    local stopWaitTimes = lineStatsHelper.createOneBasedArray(noOfStops, 0)
-    res.stopAvgWaitTimes = lineStatsHelper.createOneBasedArray(noOfStops, 0)
+    res.peopleAtStop = lineStatsUtils.createOneBasedArray(noOfStops, 0)
+    res.peopleAtStopLongWait = lineStatsUtils.createOneBasedArray(noOfStops, 0)
+    local stopWaitTimes = lineStatsUtils.createOneBasedArray(noOfStops, 0)
+    res.stopAvgWaitTimes = lineStatsUtils.createOneBasedArray(noOfStops, 0)
 
     for _, personId in pairs(personsForLineArr) do 
         local simEntityAtTerminal = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
@@ -603,7 +743,7 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
                 res.waitingCount  = res.waitingCount + 1
                 local stopNo = simEntityAtTerminal.lineStop0 + 1
                 res.peopleAtStop[stopNo] = res.peopleAtStop[stopNo] + 1
-                local waitTime = gameTime - lineStatsHelper.getTimeInSecs(simEntityAtTerminal.arrivalTime)
+                local waitTime = gameTime - lineStatsUtils.getTimeInSecs(simEntityAtTerminal.arrivalTime)
                 stopWaitTimes[stopNo] = stopWaitTimes[stopNo] + waitTime
                 if lineFreq > 60  and waitTime > lineFreq + 60 then
                     res.peopleAtStopLongWait[stopNo] =  res.peopleAtStopLongWait[stopNo] + 1
@@ -612,7 +752,7 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
                     res.peopleAtStopLongWait[stopNo] =  res.peopleAtStopLongWait[stopNo] + 1
                 end
             end
-        end 
+        end
         -- On Vehicle
         if simEntityAtVeh then     
             if simEntityAtVeh.line == lineId then    
@@ -623,7 +763,7 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
     end
 
     for stopNo, count in pairs(res.peopleAtStop) do
-        res.stopAvgWaitTimes[stopNo] = lineStatsHelper.safeDivide(stopWaitTimes[stopNo], count)
+        res.stopAvgWaitTimes[stopNo] = lineStatsUtils.safeDivide(stopWaitTimes[stopNo], count)
     end
 
     return res
@@ -637,202 +777,6 @@ end
 
 
 -- 2x more people waiting than loaded
-
-
-
--------------------------------------------------------------
----------------------- Util Functions ----------------------
--------------------------------------------------------------
-
-
-
----@param a table
----@param b table
--- returns Array, the intersect of a and b
-function lineStatsHelper.intersect(a,b)
-    local intersectVals = {}
-
-    if a == nil then return {} end
-    if b == nil then return {} end
-
-    for _, av in pairs(a) do 
-        for _, bv in pairs(b) do 
-            if av == bv then
-                table.insert(intersectVals, av)
-            end
-        end
-	end
-
-    return lineStatsHelper.distinctArr(intersectVals)
-end
-
----@param arr table
--- Removes Duplicate elements https://stackoverflow.com/questions/20066835/lua-remove-duplicate-elements
-function  lineStatsHelper.distinctArr(arr)
-    
-    if arr == nil then return {} end
-
-    local hash = {}
-    local res = {}
-
-    for _,v in ipairs(arr) do
-        if (not hash[v]) then
-            res[#res+1] = v
-            hash[v] = true
-        end
-    end
-
-    return res
-end
-
----@param tab table
--- returns the sorted keys of the table
--- https://www.lua.org/pil/19.3.html
-function lineStatsHelper.getKeysAsSortedTable(tab)
-	local keys = {} 
-	for k, v in pairs(tab) do 
-		table.insert(keys,k)
-	end
-	table.sort(keys)
-	return keys
-end
-
----@param tab table
--- returns the table sorted by values
--- https://www.lua.org/pil/19.3.html
-function lineStatsHelper.sortByValues(tab)
-    local entities = {}
- 
-    for key, value in pairs(tab) do
-        table.insert(entities, {key = key, value = value})
-    end
-     
-    table.sort(entities, function(a, b) return a.value < b.value end)
-
-    return entities
-end
-
-
----@param count number
----@param defaultVal number | string | any
--- returns a index one based array with all values set to defaultVal
-function lineStatsHelper.createOneBasedArray(count, defaultVal)
-    local arr={}
-    for i=1,count do
-        arr[i]=defaultVal
-    end
-    return arr
-end
-
----@param count number
--- returns a index one based array with empty tables
-function lineStatsHelper.createOneBasedArrayTable(count)
-    local arr={}
-    for i=1,count do
-        arr[i]={}
-    end
-    return arr
-end
-
----@param n number
----@param m number
----@param defaultVal number | string | any
--- returns a Matrices/Multi-Dimensional Array. See https://www.lua.org/pil/11.2.html
-function lineStatsHelper.createOneBasedArrayOfArrays(n,m, defaultVal)
-    local matrix={}
-    for i=1,n do
-        matrix[i]={}
-        for j=1,m do
-            matrix[i][j] = defaultVal
-        end
-    end
-    return matrix
-end
-
--- returns Number, current GameTime in seconds
-function lineStatsHelper.getTime()
-    local gameTimeComp = api.engine.getComponent(api.engine.util.getWorld(), api.type.ComponentType.GAME_TIME)
-    local time = gameTimeComp.gameTime
-    return lineStatsHelper.getTimeInSecs(time)
-end
-
----@param time number
--- returns Number, time in seconds
-function lineStatsHelper.getTimeInSecs(time)
-    if time then
-        time = math.floor(time/ 1000)
-        return time
-    else
-        return 0
-    end
-end
-
-
----@param time number
--- returns Formated time string
-function lineStatsHelper.getTimeStr(time)
-    if not(type(time) == "number") then return "ERROR" end 
-
-    local timeStr = os.date('%M:%S', time)
-    if(time == 0) then
-        timeStr = "--:--"
-    end
-    return timeStr
-end
-
-
----@param num number
----@param denom number
----Returns 0 if denominator is 0, the num/denom otherwise
-function lineStatsHelper.safeDivide(num, denom)
-    if denom == 0 then
-        return 0
-    else
-        return num / denom
-    end
-end
-
----@param arr table
--- returns the avearge of non zero values
-function lineStatsHelper.avgNonZeroValuesInArray(arr)
-    local total = 0
-    local count = 0
-    for k,_ in pairs(arr) do
-        if (arr[k] > 0) then
-            total = total + arr[k]
-            count = count + 1
-        end
-    end
-    return lineStatsHelper.safeDivide(total, count)
-end
-
-
----https://stackoverflow.com/questions/9168058/how-to-dump-a-table-to-console
----@param o any
----@return string
-function lineStatsHelper.dump(o)
-    if type(o) == 'table' then
-       local s = '{ '
-       for k,v in pairs(o) do
-          if type(k) ~= 'number' then k = '"'..k..'"' end
-          s = s .. '['..k..'] = ' .. lineStatsHelper.dump(v) .. ','
-       end
-       return s .. '} '
-    else
-       return tostring(o)
-    end
- end
-
--- https://stackoverflow.com/questions/2705793/how-to-get-number-of-entries-in-a-lua-table
-function lineStatsHelper.tablelength(T)
-  local count = 0
-  for _ in pairs(T) do count = count + 1 end
-  return count
-end
-
-function lineStatsHelper.tableHasKey(table,key)
-    return table[key] ~= nil
-end
 
 return lineStatsHelper
 

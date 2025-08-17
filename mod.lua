@@ -23,14 +23,14 @@ This shows show additonal stats about lines. Only useful for passenger lines:
 - Average passenger waiting time
 - How many passengers are waiting at a stop
 - How many passengers have been waiting for longer than the line frequency (plus 1 minute in case of delays). Aka there was not enough space on the last vehicle for them
-- Passengers travelling on the line vs waiting
+- Passengers travelling on the line vs waiting vs line capacity
 - Leg times between stops
-- Competing lines (speed is the biggest deciding factor for which lines passengers pick. This allows you to see if a line is faster and therefore getting a higher share of passengers. I've noticed that the platform chosen on larger stations can have a noticable impact.)
-- Vehicles on line
+- Competing lines (speed is the biggest deciding factor for which lines passengers pick. This allows you to see lines competing for the same destinations and the time difference between them)
+- Vehicles on line and where they are currently located
 
 LOST TRAINS
-- This provides a list of potentially lost trains. Trains are thought to be lost when they've been travelling for longer than 1.5x the maximum leg time or 3x the average leg time between stations
-- You can reset trains in view or reset all lost trains. It's advised to reset trains in view after making station/track adjustments so the trains don't get lost
+- This mod provides a list of potentially lost trains. Trains are thought to be lost when they've been travelling for longer than 1.5x the maximum leg time or 3x the average leg time between stations
+- You can reset trains. It's advised to reset trains in view after making station/track adjustments so the trains don't get lost in the first place (reseting trains reverses them 2x to recalculate their route)
 
 OTHER
 - This mod doesn't show any stats about cargo

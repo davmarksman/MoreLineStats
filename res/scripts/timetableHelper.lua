@@ -45,33 +45,6 @@ end
 ---------------------- Line related -------------------------
 -------------------------------------------------------------
 ---
----@param lineType string, eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
--- returns Bool
-function timetableHelper.isLineOfType(lineType)
-    local lines = api.engine.system.lineSystem.getLines()
-    local res = {}
-    for k,l in pairs(lines) do
-        res[k] = timetableHelper.lineHasType(l, lineType)
-    end
-    return res
-end
-
----@param line  number | string
----@param lineType string, eg "RAIL", "ROAD", "TRAM", "WATER", "AIR"
--- returns Bool
-function timetableHelper.lineHasType(line, lineType)
-    if type(line) == "string" then line = tonumber(line) end
-    if not(type(line) == "number") then print("Expected String or Number") return -1 end
-
-    local vehicles = api.engine.system.transportVehicleSystem.getLineVehicles(line)
-    if vehicles and vehicles[1] then
-        local component = api.engine.getComponent(vehicles[1], api.type.ComponentType.TRANSPORT_VEHICLE)
-        if component and component.carrier then
-            return component.carrier  == api.type.enum.Carrier[lineType]
-        end
-    end
-    return false
-end
 
 ---@param line number | string
 -- returns lineName : String
@@ -106,22 +79,6 @@ function timetableHelper.getFrequency(line)
     end
 end
 
--- returns [{id : number, name : String}]
-function timetableHelper.getAllLines()
-    local res = {}
-    local ls = api.engine.system.lineSystem.getLines()
-
-    for k,l in pairs(ls) do
-        local lineName = api.engine.getComponent(l, api.type.ComponentType.NAME)
-        if lineName and lineName.name then
-            res[k] = {id = l, name = lineName.name}
-        else
-            res[k] = {id = l, name = "ERROR"}
-        end
-    end
-
-    return res
-end
 
 
 -------------------------------------------------------------
@@ -196,18 +153,6 @@ function timetableHelper.getOrderOfArray(arr)
     return res
 end
 
----@param line  number | string
--- returns String
--- If no line type is set, this assumes it is a road vehicle line.
-function timetableHelper.getLineType(line)
-	local lineTypes = {"RAIL", "ROAD", "TRAM", "WATER", "AIR"}
-	for _,currentLineType in pairs(lineTypes) do
-		if timetableHelper.lineHasType(line, currentLineType) then
-			return string.lower(currentLineType)
-		end
-	end
-	return "road"
-end
 
 ---@param a table
 ---@param b table

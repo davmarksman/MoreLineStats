@@ -1,6 +1,7 @@
 local lineStatsHelper = require "lineStatsHelper"
 local timetableHelper = require "timetableHelper"
 local lostTrainsHelper = require "lostTrainsHelper"
+local lineStatsUtils = require "lineStatsUtils"
 local uiUtil = require "uiHelper"
 
 local gui = require "gui"
@@ -17,6 +18,7 @@ local UIState = {
 
 local lineStatsGUI = {}
 local vehicle2cargoMapCache = {}
+local allLinesCache = {}
 
 
 -- Keeps track of where the scroll bar is so the ui scrolls to them when initialised
@@ -215,7 +217,7 @@ function lineStatsGUI.showLineMenu()
     menu.tabWidget:addTab(api.gui.comp.TextView.new("Lost Trains"), lostTrainsWrapper)
 
     -- create final window
-    menu.window = api.gui.comp.Window.new("Line Statistics", menu.tabWidget)
+    menu.window = api.gui.comp.Window.new("Passenger Line Statistics", menu.tabWidget)
     menu.window:addHideOnCloseHandler()
     menu.window:setMovable(true)
     menu.window:setPinButtonVisible(true)
@@ -249,7 +251,7 @@ function lineStatsGUI.fillLostLines()
     
             local lblLineName = api.gui.comp.TextView.new(lineName)
             local lblVehicleName = uiUtil.makeLocateText(vehicleId, vehicleName)
-            local timeStr = lineStatsHelper.getTimeStr(timeSinceDep)
+            local timeStr = lineStatsUtils.getTimeStr(timeSinceDep)
             local lblTimeSinceDep = api.gui.comp.TextView.new(timeStr)
     
             menu.lostTrainsTable:addRow({lblLineName, lblVehicleName,lblTimeSinceDep })
@@ -277,10 +279,12 @@ function lineStatsGUI.fillLineTable()
     toggleBtns["AIR"] = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_planes.tga"))
 
     menu.lineHeader:addRow({ toggleBtns["ALL"], toggleBtns["ROAD"], toggleBtns["TRAM"], toggleBtns["RAIL"], toggleBtns["WATER"], toggleBtns["AIR"] })
+    print("Fill table of lines")
 
     -- Fill table of lines
     local lineNames = {}
-    for k,v in pairs(timetableHelper.getAllLines()) do
+    allLinesCache = lineStatsHelper.getAllPassengerLines()
+    for k,v in pairs(allLinesCache) do
         local lineDot = api.gui.comp.TextView.new("●")
         local lineName = api.gui.comp.TextView.new(v.name)
         lineNames[k] = v.name
@@ -293,7 +297,7 @@ function lineStatsGUI.fillLineTable()
     menu.lineTable:setOrder(order)
 
     -- Filter Functions
-    toggleBtns["ALL"]:onToggle(function()        
+    toggleBtns["ALL"]:onToggle(function()
         lineStatsGUI.filterToLinesOfType("ALL", toggleBtns)
     end)
 
@@ -332,11 +336,15 @@ function lineStatsGUI.filterToLinesOfType(typeOfLine, toggleButtons)
             v[2]:setVisible(true,false)
         end
     else
-        local linesOfType = timetableHelper.isLineOfType(typeOfLine)
         for k,v in pairs(menu.lineTableItems) do
-            if not(linesOfType[k] == nil) then
-                v[1]:setVisible(linesOfType[k],false)
-                v[2]:setVisible(linesOfType[k],false)
+            local lineDets = allLinesCache[k]
+
+            if lineDets.lineType == api.type.enum.Carrier[typeOfLine] then
+                v[1]:setVisible(true,false)
+                v[2]:setVisible(true,false)
+            else
+                v[1]:setVisible(false,false)
+                v[2]:setVisible(false,false)
             end
         end
     end
@@ -363,11 +371,10 @@ function lineStatsGUI.onLineSelected(index)
         UIState.lastSelectedLineTableIndex = index
     end
 
-    local allLines = timetableHelper.getAllLines()
-    if not(allLines[index+1]) then return end
+    if not(allLinesCache[index+1]) then return end
 
 
-    local lineId = allLines[index+1].id
+    local lineId = allLinesCache[index+1].id
 
     print("Selected LineId " .. lineId)
     UIState.lastSelectedLineId = lineId
@@ -378,39 +385,45 @@ end
 function lineStatsGUI.fillStationTable(lineID)
     -- initial cleanup
     if not(menu.stationTable) then return end
-    
     menu.stationTable:deleteAll()
+
+    -- Check line exists
+    local lineName = timetableHelper.getLineName(lineID)
+    if lineName == "ERRROR" then return end
 
       -- Cache the list of vehicles for use later
     vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
 
-    local vehicleType = timetableHelper.getLineType(lineID)
-    -- local lineFreq = timetableHelper.getFrequency(lineID)
+    -- load line details
+    local vehicleType = lineStatsHelper.getLineTypeStr(lineID)
+    vehicleType = string.lower(vehicleType)
+
+    local passengerStats = lineStatsHelper.getPassengerStatsForLine(lineID)
+    local lineFreqText = lineStatsUtils.getTimeStr(passengerStats.lineFreq)
+    
+    local stationsList = timetableHelper.getAllStations(lineID)
+    local stationLegTimes = lineStatsHelper.getLegTimes(lineID)
+    local lineSectDemand = lineStatsHelper.getLegDemands(lineID)
+    local vehiclePositions = lineStatsHelper.getAggregatedVehLocs(lineID)
 
     -- Header
-    local passengerStats = lineStatsHelper.getPassengerStatsForLine(lineID)
-
-    local lineFreqText = lineStatsHelper.getTimeStr(passengerStats.lineFreq)
-
-    local lineStatsTxt = "Freq: " ..  lineFreqText .. " | Demand: " .. passengerStats.totalCount .. " | Cargo: " .. passengerStats.inVehCount .. "/" .. passengerStats.lineCapacity
+    local lineStatsTxt = "Freq: " ..  lineFreqText .. " | Demand: " .. passengerStats.totalCount .. " | Cap: " .. passengerStats.inVehCount .. "/" .. passengerStats.lineCapacity
 
     local header1 = api.gui.comp.TextView.new(lineStatsTxt)
     local header2 = api.gui.comp.TextView.new("")
     local header3 = api.gui.comp.TextView.new("Avg Wait")
-    local header4 = api.gui.comp.TextView.new("Waiting: " .. passengerStats.waitingCount)
+    local header4 = api.gui.comp.TextView.new("Wait: " .. passengerStats.waitingCount)
     local header5 = api.gui.comp.TextView.new("Journey")
     local header6 = api.gui.comp.TextView.new("")
     menu.stationTable:setHeader({header1,header2, header3, header4, header5, header6})
 
-    --iterate over all stations to display them
-    local stationsList = timetableHelper.getAllStations(lineID)
-    local stationLegTimes = lineStatsHelper.getLegTimes(lineID)
+
     menu.lineImage = {}
 
+    --iterate over all stations to display them
     for stnIdx, stnId in pairs(stationsList) do
 
         -- Vehicles on Line image(s)
-        local vehiclePositions = lineStatsHelper.getAggregatedVehLocs(lineID)
         local imageFile = uiUtil.getVehiclesOnSectionImageFile(vehiclePositions, stnIdx, vehicleType)
         menu.lineImage[stnIdx] = api.gui.comp.ImageView.new(imageFile)
 
@@ -432,17 +445,11 @@ function lineStatsGUI.fillStationTable(lineID)
         end)
 
         local station = timetableHelper.getStationNameWithId(stnId)
-        local nextStation
-        if stationsList[stnIdx + 1] then
-            nextStation = timetableHelper.getStationNameWithId(stationsList[stnIdx + 1] )
-        else
-            nextStation =  timetableHelper.getStationNameWithId(stationsList[1])
-        end
+        local nextStopIdx = lineStatsHelper.getNextStopFromStns(stnIdx, #stationsList)
+        local nextStation = timetableHelper.getStationNameWithId(stationsList[nextStopIdx])
 
-        local stationNumber = api.gui.comp.TextView.new(tostring(stnIdx))
-
-        stationNumber:setStyleClassList({"timetable-stationcolour"})
-        stationNumber:setMinimumSize(api.gui.util.Size.new(30, 30))
+        local lblStationNumber = api.gui.comp.TextView.new(tostring(stnIdx))
+        lblStationNumber:setMinimumSize(api.gui.util.Size.new(30, 30))
 
         -- Station Col
         local lblStartStn = uiUtil.makeLocateText(station.id, station.name)
@@ -450,29 +457,39 @@ function lineStatsGUI.fillStationTable(lineID)
         local compStationNames =  uiUtil.makeVertical(lblStartStn, lblEndStn)
 
         -- Wait time col
-        local lblAvgWaitTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(passengerStats.stopAvgWaitTimes[stnIdx]))
+        local lblAvgWaitTime = api.gui.comp.TextView.new(lineStatsUtils.getTimeStr(passengerStats.stopAvgWaitTimes[stnIdx]))
 
         -- Passenger Waiting col 
+        -- right_arrow
         local compTotalWaiting = uiUtil.makeIconText(tostring(passengerStats.peopleAtStop[stnIdx]), "ui/hud/cargo_passengers.tga")
 
         local compLongWait
-        if (passengerStats.peopleAtStopLongWait[stnIdx] > 0) then
+        if passengerStats.peopleAtStopLongWait[stnIdx] > 0 then
             compLongWait = uiUtil.makeIconText(tostring(passengerStats.peopleAtStopLongWait[stnIdx]), "ui/clock_small@2x.tga")
         else
             compLongWait = api.gui.comp.TextView.new("")
         end
-        
         local compPplWaiting =  uiUtil.makeVertical(compTotalWaiting, compLongWait)
 
         -- Journey time column
         local lblJurneyTime
-        if (stationLegTimes and stationLegTimes[stnIdx]) then
-            lblJurneyTime = api.gui.comp.TextView.new(lineStatsHelper.getTimeStr(stationLegTimes[stnIdx]))
+        if stationLegTimes and stationLegTimes[stnIdx] then
+            lblJurneyTime = api.gui.comp.TextView.new(lineStatsUtils.getTimeStr(stationLegTimes[stnIdx]))
         else
             lblJurneyTime = api.gui.comp.TextView.new("")
         end
+
+        local compJourneyPpl
+        if lineSectDemand and lineSectDemand[stnIdx] then
+            -- compJourneyPpl = uiUtil.makeIconText(tostring(lineSectDemand[stnIdx]), "ui/hud/right_arrow.tga")
+            compJourneyPpl = uiUtil.makeIconText(tostring(lineSectDemand[stnIdx]), "ui/passengers_dest.tga")
+        else
+            compJourneyPpl = api.gui.comp.TextView.new("")
+        end
+
+        local compJurney =  uiUtil.makeVertical(lblJurneyTime,compJourneyPpl)
         
-        menu.stationTable:addRow({stationNumber, compStationNames, lblAvgWaitTime, compPplWaiting, lblJurneyTime, menu.lineImage[stnIdx]})
+        menu.stationTable:addRow({lblStationNumber, compStationNames, lblAvgWaitTime, compPplWaiting, compJurney, menu.lineImage[stnIdx]})
     end
 
 
@@ -534,7 +551,7 @@ function lineStatsGUI.fillDetailsTable(index, lineID)
             local elineId = competingLines.key
             local time = competingLines.value
             local lineName = timetableHelper.getLineName(elineId)
-            local timeStr = lineStatsHelper.getTimeStr(time)
+            local timeStr = lineStatsUtils.getTimeStr(time)
 
             local lblJurneyTime = api.gui.comp.TextView.new(timeStr)
             local shortenedLineName = lineName
