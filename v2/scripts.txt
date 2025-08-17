@@ -1,0 +1,1365 @@
+line id 34063
+
+local line = api.engine.getComponent(34063, api.type.ComponentType.LINE)
+
+line.vehicleInfo.transportModes[api.type.enum.TransportMode.ELECTRIC_TRAIN+1]==1 
+line.vehicleInfo.transportModes[api.type.enum.TransportMode.TRAIN+1]==1 
+
+
+197353
+
+-- "Bus Sabadell 2"
+197353
+api.engine.getComponent(197353, api.type.ComponentType.LINE)
+--- stationGroup 87915
+api.engine.getComponent(87915, api.type.ComponentType.STATION_GROUP)
+-- 207262
+api.engine.system.streetConnectorSystem.getConstructionEntityForStation(207262)
+--= -1
+api.engine.getComponent(207262, api.type.ComponentType.STATION).terminals[1].vehicleNodeId.entity
+-- 153310
+>> api.engine.getComponent(153310, api.type.ComponentType.BASE_EDGE)
+{
+  node0 = 141727,
+  node1 = 158622,
+  tangent0 = {
+    x = -118.65633392334,
+    y = 27.612777709961,
+    z = 0,
+  },
+  tangent1 = {
+    x = -117.07262420654,
+    y = 27.244207382202,
+    z = -19.838115692139,
+  },
+  type = 0,
+  typeIndex = -1,
+  objects = {
+    { 207262, 1, },
+  },
+}
+
+ >> api.engine.getComponent(141727, api.type.ComponentType.BASE_NODE)
+{
+  position = {
+    x = -1783.2628173828,
+    y = -2579.8364257813,
+    z = 118.8049621582,
+  },
+  doubleSlipSwitch = false,
+  trafficLightPreference = 2,
+}
+
+
+
+game.interface.getEntity(28887)
+
+ >> game.interface.getEntity(34063)
+{
+  frequency = 0.0058565153740346,
+  id = 34063,
+  itemsTransported = {
+    PASSENGERS = 81875,
+    _lastMonth = {
+      PASSENGERS = 0,
+      _sum = 0,
+    },
+    _lastYear = {
+      PASSENGERS = 0,
+      _sum = 0,
+    },
+    _sum = 81875,
+  },
+  name = "Granada - Sabadell 2",
+  rate = 693,
+  stops = { 35186, 38134, },
+  type = "LINE",
+}
+
+
+
+-- Get type of line
+ >> api.engine.getComponent(34063, api.type.ComponentType.LINE)
+{
+  stops = {
+    [1] = {
+      stationGroup = 35186,
+      station = 0,
+      terminal = 3,
+      alternativeTerminals = {
+      },
+      loadMode = 0,
+      minWaitingTime = 0,
+      maxWaitingTime = 180,
+      waypoints = {
+      },
+      stopConfig = {
+        load = {
+        },
+        unload = {
+        },
+        maxLoad = {
+        },
+      },
+    },
+    [2] = {
+      stationGroup = 38134,
+      station = 0,
+      terminal = 1,
+      alternativeTerminals = {
+      },
+      loadMode = 0,
+      minWaitingTime = 0,
+      maxWaitingTime = 180,
+      waypoints = {
+      },
+      stopConfig = {
+        load = {
+        },
+        unload = {
+        },
+        maxLoad = {
+        },
+      },
+    },
+  },
+  waitingTime = 180,
+  vehicleInfo = {
+    transportModes = {
+      [1] = 0,
+      [2] = 0,
+      [3] = 0,
+      [4] = 0,
+      [5] = 0,
+      [6] = 0,
+      [7] = 0,
+      [8] = 0,
+      [9] = 1,
+      [10] = 0,
+      [11] = 0,
+      [12] = 0,
+      [13] = 0,
+      [14] = 0,
+      [15] = 0,
+      [16] = 0,
+    },
+    defaultPrice = 137.22328186035,
+  },
+}
+
+>> api.engine.getComponent(34063, api.type.ComponentType.LINE).vehicleInfo.transportModes
+{
+  [1] = 0,
+  [2] = 0,
+  [3] = 0,
+  [4] = 0,
+  [5] = 0,
+  [6] = 0,
+  [7] = 0,
+  [8] = 0,
+  [9] = 1,
+  [10] = 0,
+  [11] = 0,
+  [12] = 0,
+  [13] = 0,
+  [14] = 0,
+  [15] = 0,
+  [16] = 0,
+}
+
+Attempt 1
+-- Get station construction
+api.engine.system.streetConnectorSystem.getConstructionEntityForStation(stationId)
+-- Get construction using that
+api.engine.getComponent(constructionId, api.type.ComponentType.CONSTRUCTION)
+-- Get coords
+api.engine.getComponent(38106, api.type.ComponentType.CONSTRUCTION).transf:cols(3)
+
+Attempt 
+
+Attempt 2 - Path between stations. Don't think necessary tbh
+
+
+local stationComp = api.engine.getComponent(station, api.type.ComponentType.STATION)
+local vehicleNodeId = stationComp.terminals[terminal+1].vehicleNodeId
+local edgeId = util.getTrackSegmentsForNode(vehicleNodeId.entity)[1]
+
+util.getTrackSegmentsForNode(vehicleNodeId.entity) is api.engine.system.streetSystem.getNode2TrackEdgeMap()[node]
+
+return {
+	-- NB tracks only have one transport network for the rail path, the edge index is always zero
+	api.type.EdgeIdDirAndLength.new(api.type.EdgeId.new(edgeId, 0), true, 0),
+	api.type.EdgeIdDirAndLength.new(api.type.EdgeId.new(edgeId, 0), false, 0)
+	} 
+	
+	
+	
+station group -> 38134, terminal 1
+
+station group -> 35186, terminal 3
+
+
+ >> api.engine.getComponent(38134, api.type.ComponentType.STATION_GROUP)
+{
+  stations = {
+    [1] = 38179,
+  },
+}
+
+
+ >> api.engine.system.streetConnectorSystem.getConstructionEntityForStation(38134)
+-1
+
+
+-- Only works with stations
+ >> api.engine.system.streetConnectorSystem.getConstructionEntityForStation(38179)
+38106
+
+api.engine.getComponent(38106, api.type.ComponentType.CONSTRUCTION)
+>> api.engine.getComponent(38106, api.type.ComponentType.CONSTRUCTION)
+ ... 
+{
+  fileName = "station/rail/modular_station/modular_station.con",
+  params = {
+    catenary = 0,
+    length = 4,
+    modules = {
+      [3399995] = {
+        metadata = {
+          era = 2,
+          level = 1,
+          moreCapacity = {
+            cargo = 0,
+            passenger = 20,
+          },
+          span = {
+            [1] = 2,
+            [2] = 2,
+          },
+        },
+        name = "station/rail/modular_station/side_building_1_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [3400010] = {
+        metadata = {
+          era = 2,
+          level = 2,
+          moreCapacity = {
+            cargo = 0,
+            passenger = 50,
+          },
+          snapPoint = {
+            [1] = 6.1232339957368e-17,
+            [2] = -1,
+            [3] = 0,
+            [4] = 0,
+            [5] = 1,
+            [6] = 6.1232339957368e-17,
+            [7] = 0,
+            [8] = 0,
+            [9] = 0,
+            [10] = 0,
+            [11] = 1,
+            [12] = 0,
+            [13] = -20,
+            [14] = 0,
+            [15] = 0,
+            [16] = 1,
+          },
+          span = {
+            [1] = 1,
+            [2] = 2,
+          },
+        },
+        name = "station/rail/modular_station/main_building_2_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [3400025] = {
+        metadata = {
+          era = 2,
+          level = 1,
+          moreCapacity = {
+            cargo = 0,
+            passenger = 20,
+          },
+          span = {
+            [1] = 2,
+            [2] = 2,
+          },
+        },
+        name = "station/rail/modular_station/side_building_1_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7399970] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7399980] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7399990] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7400000] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7400010] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7400020] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7400030] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7400040] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7402970] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7402980] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7402990] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7403000] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7403010] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7403020] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7403030] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [7403040] = {
+        metadata = {
+          passenger_platform = true,
+          platform = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8400970] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8400980] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8400990] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8401000] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8401010] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8401020] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8401030] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8401040] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8401970] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8401980] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8401990] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8402000] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8402010] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8402020] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8402030] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8402040] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8403970] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8403980] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8403990] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8404000] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8404010] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8404020] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8404030] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [8404040] = {
+        metadata = {
+          track = true,
+        },
+        name = "station/rail/modular_station/platform_high_speed_track_catenary.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10399970] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10399980] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10399990] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10400000] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10400010] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10400020] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10400030] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10402970] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10402980] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10402990] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10403000] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10403010] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10403020] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10403030] = {
+        metadata = {
+          platform_roof = true,
+        },
+        name = "station/rail/modular_station/platform_passenger_roof_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10799970] = {
+        metadata = {
+          underground = true,
+        },
+        name = "station/rail/modular_station/addon_platform_passenger_stairs_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10800000] = {
+        metadata = {
+          underground = true,
+        },
+        name = "station/rail/modular_station/addon_platform_passenger_stairs_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10800030] = {
+        metadata = {
+          underground = true,
+        },
+        name = "station/rail/modular_station/addon_platform_passenger_stairs_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10802970] = {
+        metadata = {
+          underground = true,
+        },
+        name = "station/rail/modular_station/addon_platform_passenger_stairs_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10803000] = {
+        metadata = {
+          underground = true,
+        },
+        name = "station/rail/modular_station/addon_platform_passenger_stairs_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+      [10803030] = {
+        metadata = {
+          underground = true,
+        },
+        name = "station/rail/modular_station/addon_platform_passenger_stairs_era_c.module",
+        updateScript = {
+          fileName = "",
+          params = {
+          },
+        },
+        variant = 0,
+      },
+    },
+    paramX = 0,
+    paramY = 0,
+    seed = 11,
+    trackType = 1,
+    tracks = 1,
+    upgrade = true,
+    year = 2015,
+  },
+  transf = {
+    cols = <function>,
+  },
+  timeBuilt = 244724200,
+  frozenNodes = {
+    [1] = 162194,
+    [2] = 187315,
+    [3] = 168349,
+    [4] = 27432,
+    [5] = 147355,
+    [6] = 133986,
+    [7] = 103697,
+    [8] = 162368,
+    [9] = 167767,
+    [10] = 151279,
+    [11] = 167455,
+    [12] = 166029,
+    [13] = 166076,
+    [14] = 161737,
+    [15] = 160836,
+    [16] = 160574,
+    [17] = 146572,
+    [18] = 166814,
+    [19] = 70212,
+    [20] = 93043,
+    [21] = 19022,
+    [22] = 168229,
+    [23] = 204692,
+    [24] = 108498,
+    [25] = 119568,
+    [26] = 133279,
+    [27] = 160937,
+    [28] = 164438,
+    [29] = 149918,
+    [30] = 97027,
+    [31] = 167860,
+    [32] = 205524,
+    [33] = 55017,
+    [34] = 39128,
+    [35] = 143601,
+    [36] = 151825,
+    [37] = 166517,
+    [38] = 165915,
+    [39] = 86642,
+    [40] = 42471,
+    [41] = 167757,
+    [42] = 195459,
+    [43] = 166167,
+    [44] = 150881,
+    [45] = 153640,
+    [46] = 149768,
+    [47] = 155289,
+    [48] = 161059,
+    [49] = 158827,
+    [50] = 188952,
+    [51] = 151707,
+    [52] = 21163,
+    [53] = 21173,
+    [54] = 107626,
+    [55] = 155176,
+    [56] = 154946,
+    [57] = 90377,
+    [58] = 134763,
+    [59] = 202208,
+    [60] = 136476,
+    [61] = 202043,
+    [62] = 168147,
+    [63] = 137610,
+    [64] = 156014,
+    [65] = 157195,
+    [66] = 157607,
+    [67] = 192527,
+    [68] = 206137,
+    [69] = 162073,
+    [70] = 211306,
+    [71] = 1681,
+    [72] = 1695,
+    [73] = 1992,
+    [74] = 4961,
+    [75] = 5032,
+    [76] = 8377,
+    [77] = 9985,
+    [78] = 20579,
+    [79] = 24235,
+    [80] = 26995,
+    [81] = 27124,
+    [82] = 27485,
+    [83] = 27637,
+    [84] = 29975,
+    [85] = 32548,
+    [86] = 36686,
+    [87] = 36952,
+    [88] = 38145,
+    [89] = 65161,
+    [90] = 69112,
+    [91] = 73846,
+    [92] = 81410,
+    [93] = 81521,
+    [94] = 81620,
+    [95] = 83514,
+    [96] = 86638,
+    [97] = 87761,
+    [98] = 92531,
+    [99] = 92708,
+    [100] = 94705,
+    [101] = 95961,
+    [102] = 98264,
+    [103] = 98617,
+    [104] = 103408,
+    [105] = 104397,
+    [106] = 106088,
+    [107] = 107693,
+    [108] = 107870,
+    [109] = 108462,
+    [110] = 108599,
+    [111] = 108873,
+    [112] = 123084,
+    [113] = 126618,
+    [114] = 131049,
+    [115] = 133215,
+    [116] = 133299,
+    [117] = 134860,
+    [118] = 135353,
+    [119] = 143046,
+    [120] = 147898,
+    [121] = 148530,
+    [122] = 149087,
+    [123] = 149137,
+    [124] = 149490,
+    [125] = 149770,
+    [126] = 150602,
+    [127] = 150694,
+    [128] = 150876,
+    [129] = 151343,
+    [130] = 152440,
+    [131] = 152697,
+    [132] = 152803,
+    [133] = 153517,
+    [134] = 153826,
+    [135] = 154026,
+    [136] = 154063,
+    [137] = 155240,
+    [138] = 155257,
+    [139] = 155610,
+    [140] = 155738,
+    [141] = 155827,
+  },
+  frozenEdges = {
+    [1] = 4296,
+    [2] = 13258,
+    [3] = 14711,
+    [4] = 21584,
+    [5] = 24232,
+    [6] = 25136,
+    [7] = 30370,
+    [8] = 35024,
+    [9] = 41604,
+    [10] = 41982,
+    [11] = 44686,
+    [12] = 56302,
+    [13] = 70274,
+    [14] = 74107,
+    [15] = 79606,
+    [16] = 93386,
+    [17] = 93669,
+    [18] = 96997,
+    [19] = 99577,
+    [20] = 99861,
+    [21] = 99966,
+    [22] = 100155,
+    [23] = 101705,
+    [24] = 125640,
+    [25] = 131273,
+    [26] = 134238,
+    [27] = 135315,
+    [28] = 135474,
+    [29] = 140060,
+    [30] = 143033,
+    [31] = 143067,
+    [32] = 144571,
+    [33] = 147361,
+    [34] = 147368,
+    [35] = 147802,
+    [36] = 149317,
+    [37] = 149423,
+    [38] = 149717,
+    [39] = 149974,
+    [40] = 150136,
+    [41] = 152654,
+    [42] = 153113,
+    [43] = 153149,
+    [44] = 153383,
+    [45] = 154199,
+    [46] = 154381,
+    [47] = 154503,
+    [48] = 155184,
+    [49] = 155311,
+    [50] = 156123,
+    [51] = 156552,
+    [52] = 156570,
+    [53] = 156666,
+    [54] = 156709,
+    [55] = 156725,
+    [56] = 156728,
+    [57] = 157186,
+    [58] = 157698,
+    [59] = 157762,
+    [60] = 157900,
+    [61] = 157989,
+    [62] = 158039,
+    [63] = 158075,
+    [64] = 158093,
+    [65] = 158406,
+    [66] = 158435,
+    [67] = 158441,
+    [68] = 158771,
+    [69] = 160504,
+    [70] = 160622,
+    [71] = 160797,
+    [72] = 161002,
+    [73] = 161050,
+    [74] = 161399,
+    [75] = 161546,
+    [76] = 161592,
+    [77] = 161711,
+    [78] = 161782,
+    [79] = 162271,
+    [80] = 162345,
+    [81] = 162834,
+    [82] = 163174,
+    [83] = 163356,
+    [84] = 163588,
+    [85] = 164224,
+    [86] = 164659,
+    [87] = 164741,
+    [88] = 166616,
+    [89] = 166836,
+    [90] = 166892,
+    [91] = 167084,
+    [92] = 167312,
+    [93] = 167326,
+    [94] = 167583,
+    [95] = 167882,
+    [96] = 168164,
+    [97] = 168210,
+    [98] = 168256,
+    [99] = 168363,
+    [100] = 168417,
+    [101] = 168439,
+    [102] = 168583,
+    [103] = 168605,
+    [104] = 168831,
+    [105] = 169205,
+    [106] = 174546,
+    [107] = 178406,
+    [108] = 186781,
+    [109] = 186978,
+    [110] = 186996,
+    [111] = 187347,
+    [112] = 187822,
+    [113] = 188576,
+    [114] = 188878,
+    [115] = 189228,
+    [116] = 189239,
+    [117] = 190924,
+    [118] = 192343,
+    [119] = 192606,
+    [120] = 192813,
+    [121] = 196118,
+    [122] = 196929,
+    [123] = 196934,
+    [124] = 203366,
+    [125] = 203740,
+    [126] = 204148,
+    [127] = 204474,
+    [128] = 204559,
+    [129] = 204576,
+    [130] = 205258,
+    [131] = 205319,
+    [132] = 205332,
+    [133] = 205827,
+    [134] = 205869,
+    [135] = 206013,
+    [136] = 206069,
+    [137] = 206912,
+    [138] = 206938,
+    [139] = 206953,
+    [140] = 207056,
+    [141] = 207237,
+    [142] = 207273,
+    [143] = 207326,
+    [144] = 208947,
+  },
+  depots = {
+  },
+  stations = {
+    [1] = 38179,
+  },
+  simBuildings = {
+  },
+  townBuildings = {
+  },
+  particleSystems = {
+  },
+}
+
+ >> api.engine.getComponent(38106, api.type.ComponentType.CONSTRUCTION).transf:cols(3)
+{
+  x = -2113.8049316406,
+  y = -2418.2104492188,
+  z = 90.708602905273,
+  w = 1,
+}

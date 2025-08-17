@@ -1,0 +1,688 @@
+
+Attempt 2 - Path between stations. Don't think necessary tbh
+
+api.engine.getComponent(38179, api.type.ComponentType.STATION)
+
+local stationComp = api.engine.getComponent(station, api.type.ComponentType.STATION)
+local vehicleNodeId = stationComp.terminals[terminal+1].vehicleNodeId
+local edgeId = util.getTrackSegmentsForNode(vehicleNodeId.entity)[1]
+
+util.getTrackSegmentsForNode(vehicleNodeId.entity) is api.engine.system.streetSystem.getNode2TrackEdgeMap()[node]
+
+
+
+
+return {
+	-- NB tracks only have one transport network for the rail path, the edge index is always zero
+	api.type.EdgeIdDirAndLength.new(api.type.EdgeId.new(edgeId, 0), true, 0),
+	api.type.EdgeIdDirAndLength.new(api.type.EdgeId.new(edgeId, 0), false, 0)
+	} 
+
+ >> api.engine.system.streetSystem.getNode2TrackEdgeMap()[119568]
+{
+  [1] = 167326,
+  [2] = 167882,
+}
+
+
+api.type.EdgeIdDirAndLength.new(api.type.EdgeId.new(167326, 0), true, 0)
+
+
+	
+>> api.engine.system.streetSystem.getEdgeForEdgeObject(38134)
+-1
+
+-- only works with buses or ships. For Stations have to use construction
+
+
+
+
+	
+>> api.engine.getComponent(38179, api.type.ComponentType.STATION)
+{
+  cargo = false,
+  terminals = {
+    [1] = {
+      tag = 2,
+      personNodes = {
+        [1] = {
+          new = nil,
+          entity = 38106,
+          index = 76,
+        },
+        [2] = {
+          new = nil,
+          entity = 38106,
+          index = 111,
+        },
+        [3] = {
+          new = nil,
+          entity = 38106,
+          index = 150,
+        },
+        [4] = {
+          new = nil,
+          entity = 38106,
+          index = 185,
+        },
+        [5] = {
+          new = nil,
+          entity = 38106,
+          index = 226,
+        },
+        [6] = {
+          new = nil,
+          entity = 38106,
+          index = 427,
+        },
+        [7] = {
+          new = nil,
+          entity = 38106,
+          index = 444,
+        },
+        [8] = {
+          new = nil,
+          entity = 38106,
+          index = 460,
+        },
+      },
+      personEdges = {
+        [1] = {
+          new = nil,
+          entity = 38106,
+          index = 462,
+        },
+        [2] = {
+          new = nil,
+          entity = 38106,
+          index = 463,
+        },
+        [3] = {
+          new = nil,
+          entity = 38106,
+          index = 464,
+        },
+        [4] = {
+          new = nil,
+          entity = 38106,
+          index = 465,
+        },
+        [5] = {
+          new = nil,
+          entity = 38106,
+          index = 470,
+        },
+        [6] = {
+          new = nil,
+          entity = 38106,
+          index = 471,
+        },
+        [7] = {
+          new = nil,
+          entity = 38106,
+          index = 472,
+        },
+        [8] = {
+          new = nil,
+          entity = 38106,
+          index = 473,
+        },
+        [9] = {
+          new = nil,
+          entity = 38106,
+          index = 478,
+        },
+        [10] = {
+          new = nil,
+          entity = 38106,
+          index = 479,
+        },
+        [11] = {
+          new = nil,
+          entity = 38106,
+          index = 480,
+        },
+        [12] = {
+          new = nil,
+          entity = 38106,
+          index = 481,
+        },
+        [13] = {
+          new = nil,
+          entity = 38106,
+          index = 486,
+        },
+        [14] = {
+          new = nil,
+          entity = 38106,
+          index = 487,
+        },
+        [15] = {
+          new = nil,
+          entity = 38106,
+          index = 488,
+        },
+        [16] = {
+          new = nil,
+          entity = 38106,
+          index = 489,
+        },
+        [17] = {
+          new = nil,
+          entity = 38106,
+          index = 494,
+        },
+        [18] = {
+          new = nil,
+          entity = 38106,
+          index = 495,
+        },
+        [19] = {
+          new = nil,
+          entity = 38106,
+          index = 496,
+        },
+        [20] = {
+          new = nil,
+          entity = 38106,
+          index = 497,
+        },
+        [21] = {
+          new = nil,
+          entity = 38106,
+          index = 502,
+        },
+        [22] = {
+          new = nil,
+          entity = 38106,
+          index = 503,
+        },
+        [23] = {
+          new = nil,
+          entity = 38106,
+          index = 504,
+        },
+        [24] = {
+          new = nil,
+          entity = 38106,
+          index = 505,
+        },
+        [25] = {
+          new = nil,
+          entity = 38106,
+          index = 510,
+        },
+        [26] = {
+          new = nil,
+          entity = 38106,
+          index = 511,
+        },
+        [27] = {
+          new = nil,
+          entity = 38106,
+          index = 512,
+        },
+        [28] = {
+          new = nil,
+          entity = 38106,
+          index = 513,
+        },
+        [29] = {
+          new = nil,
+          entity = 38106,
+          index = 518,
+        },
+        [30] = {
+          new = nil,
+          entity = 38106,
+          index = 519,
+        },
+        [31] = {
+          new = nil,
+          entity = 38106,
+          index = 520,
+        },
+        [32] = {
+          new = nil,
+          entity = 38106,
+          index = 521,
+        },
+      },
+      vehicleNodeId = {
+        new = nil,
+        entity = 119568,
+        index = 0,
+      },
+    },
+    [2] = {
+      tag = 5,
+      personNodes = {
+        [1] = {
+          new = nil,
+          entity = 38106,
+          index = 266,
+        },
+        [2] = {
+          new = nil,
+          entity = 38106,
+          index = 301,
+        },
+        [3] = {
+          new = nil,
+          entity = 38106,
+          index = 342,
+        },
+        [4] = {
+          new = nil,
+          entity = 38106,
+          index = 377,
+        },
+        [5] = {
+          new = nil,
+          entity = 38106,
+          index = 418,
+        },
+        [6] = {
+          new = nil,
+          entity = 38106,
+          index = 472,
+        },
+        [7] = {
+          new = nil,
+          entity = 38106,
+          index = 485,
+        },
+        [8] = {
+          new = nil,
+          entity = 38106,
+          index = 498,
+        },
+      },
+      personEdges = {
+        [1] = {
+          new = nil,
+          entity = 38106,
+          index = 526,
+        },
+        [2] = {
+          new = nil,
+          entity = 38106,
+          index = 527,
+        },
+        [3] = {
+          new = nil,
+          entity = 38106,
+          index = 528,
+        },
+        [4] = {
+          new = nil,
+          entity = 38106,
+          index = 529,
+        },
+        [5] = {
+          new = nil,
+          entity = 38106,
+          index = 534,
+        },
+        [6] = {
+          new = nil,
+          entity = 38106,
+          index = 535,
+        },
+        [7] = {
+          new = nil,
+          entity = 38106,
+          index = 536,
+        },
+        [8] = {
+          new = nil,
+          entity = 38106,
+          index = 537,
+        },
+        [9] = {
+          new = nil,
+          entity = 38106,
+          index = 542,
+        },
+        [10] = {
+          new = nil,
+          entity = 38106,
+          index = 543,
+        },
+        [11] = {
+          new = nil,
+          entity = 38106,
+          index = 544,
+        },
+        [12] = {
+          new = nil,
+          entity = 38106,
+          index = 545,
+        },
+        [13] = {
+          new = nil,
+          entity = 38106,
+          index = 550,
+        },
+        [14] = {
+          new = nil,
+          entity = 38106,
+          index = 551,
+        },
+        [15] = {
+          new = nil,
+          entity = 38106,
+          index = 552,
+        },
+        [16] = {
+          new = nil,
+          entity = 38106,
+          index = 553,
+        },
+        [17] = {
+          new = nil,
+          entity = 38106,
+          index = 558,
+        },
+        [18] = {
+          new = nil,
+          entity = 38106,
+          index = 559,
+        },
+        [19] = {
+          new = nil,
+          entity = 38106,
+          index = 560,
+        },
+        [20] = {
+          new = nil,
+          entity = 38106,
+          index = 561,
+        },
+        [21] = {
+          new = nil,
+          entity = 38106,
+          index = 566,
+        },
+        [22] = {
+          new = nil,
+          entity = 38106,
+          index = 567,
+        },
+        [23] = {
+          new = nil,
+          entity = 38106,
+          index = 568,
+        },
+        [24] = {
+          new = nil,
+          entity = 38106,
+          index = 569,
+        },
+        [25] = {
+          new = nil,
+          entity = 38106,
+          index = 574,
+        },
+        [26] = {
+          new = nil,
+          entity = 38106,
+          index = 575,
+        },
+        [27] = {
+          new = nil,
+          entity = 38106,
+          index = 576,
+        },
+        [28] = {
+          new = nil,
+          entity = 38106,
+          index = 577,
+        },
+        [29] = {
+          new = nil,
+          entity = 38106,
+          index = 582,
+        },
+        [30] = {
+          new = nil,
+          entity = 38106,
+          index = 583,
+        },
+        [31] = {
+          new = nil,
+          entity = 38106,
+          index = 584,
+        },
+        [32] = {
+          new = nil,
+          entity = 38106,
+          index = 585,
+        },
+      },
+      vehicleNodeId = {
+        new = nil,
+        entity = 211306,
+        index = 0,
+      },
+    },
+    [3] = {
+      tag = 8,
+      personNodes = {
+        [1] = {
+          new = nil,
+          entity = 38106,
+          index = 267,
+        },
+        [2] = {
+          new = nil,
+          entity = 38106,
+          index = 302,
+        },
+        [3] = {
+          new = nil,
+          entity = 38106,
+          index = 343,
+        },
+        [4] = {
+          new = nil,
+          entity = 38106,
+          index = 378,
+        },
+        [5] = {
+          new = nil,
+          entity = 38106,
+          index = 419,
+        },
+        [6] = {
+          new = nil,
+          entity = 38106,
+          index = 511,
+        },
+        [7] = {
+          new = nil,
+          entity = 38106,
+          index = 528,
+        },
+        [8] = {
+          new = nil,
+          entity = 38106,
+          index = 544,
+        },
+      },
+      personEdges = {
+        [1] = {
+          new = nil,
+          entity = 38106,
+          index = 590,
+        },
+        [2] = {
+          new = nil,
+          entity = 38106,
+          index = 591,
+        },
+        [3] = {
+          new = nil,
+          entity = 38106,
+          index = 592,
+        },
+        [4] = {
+          new = nil,
+          entity = 38106,
+          index = 593,
+        },
+        [5] = {
+          new = nil,
+          entity = 38106,
+          index = 598,
+        },
+        [6] = {
+          new = nil,
+          entity = 38106,
+          index = 599,
+        },
+        [7] = {
+          new = nil,
+          entity = 38106,
+          index = 600,
+        },
+        [8] = {
+          new = nil,
+          entity = 38106,
+          index = 601,
+        },
+        [9] = {
+          new = nil,
+          entity = 38106,
+          index = 606,
+        },
+        [10] = {
+          new = nil,
+          entity = 38106,
+          index = 607,
+        },
+        [11] = {
+          new = nil,
+          entity = 38106,
+          index = 608,
+        },
+        [12] = {
+          new = nil,
+          entity = 38106,
+          index = 609,
+        },
+        [13] = {
+          new = nil,
+          entity = 38106,
+          index = 614,
+        },
+        [14] = {
+          new = nil,
+          entity = 38106,
+          index = 615,
+        },
+        [15] = {
+          new = nil,
+          entity = 38106,
+          index = 616,
+        },
+        [16] = {
+          new = nil,
+          entity = 38106,
+          index = 617,
+        },
+        [17] = {
+          new = nil,
+          entity = 38106,
+          index = 622,
+        },
+        [18] = {
+          new = nil,
+          entity = 38106,
+          index = 623,
+        },
+        [19] = {
+          new = nil,
+          entity = 38106,
+          index = 624,
+        },
+        [20] = {
+          new = nil,
+          entity = 38106,
+          index = 625,
+        },
+        [21] = {
+          new = nil,
+          entity = 38106,
+          index = 630,
+        },
+        [22] = {
+          new = nil,
+          entity = 38106,
+          index = 631,
+        },
+        [23] = {
+          new = nil,
+          entity = 38106,
+          index = 632,
+        },
+        [24] = {
+          new = nil,
+          entity = 38106,
+          index = 633,
+        },
+        [25] = {
+          new = nil,
+          entity = 38106,
+          index = 638,
+        },
+        [26] = {
+          new = nil,
+          entity = 38106,
+          index = 639,
+        },
+        [27] = {
+          new = nil,
+          entity = 38106,
+          index = 640,
+        },
+        [28] = {
+          new = nil,
+          entity = 38106,
+          index = 641,
+        },
+        [29] = {
+          new = nil,
+          entity = 38106,
+          index = 646,
+        },
+        [30] = {
+          new = nil,
+          entity = 38106,
+          index = 647,
+        },
+        [31] = {
+          new = nil,
+          entity = 38106,
+          index = 648,
+        },
+        [32] = {
+          new = nil,
+          entity = 38106,
+          index = 649,
+        },
+      },
+      vehicleNodeId = {
+        new = nil,
+        entity = 143046,
+        index = 0,
+      },
+    },
+  },
+  tag = 2,
+  pool = {
+    edges = {
+    },
+    moreCapacity = 90,
+  },
+}
