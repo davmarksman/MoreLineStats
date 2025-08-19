@@ -52,7 +52,6 @@ end
 ---@param arr table
 -- Removes Duplicate elements https://stackoverflow.com/questions/20066835/lua-remove-duplicate-elements
 function  luaUtils.distinctArr(arr)
-    
     if arr == nil then return {} end
 
     local hash = {}
@@ -89,7 +88,7 @@ function luaUtils.sortByValues(tab)
     for key, value in pairs(tab) do
         table.insert(entities, {key = key, value = value})
     end
-     
+
     table.sort(entities, function(a, b) return a.value < b.value end)
 
     return entities
@@ -147,11 +146,13 @@ end
 ---@param time number
 -- returns Formated time string
 function luaUtils.getTimeStr(time)
-    if not(type(time) == "number") then return "ERROR" end 
+    if not(type(time) == "number") then return "ERROR" end
 
     local timeStr = os.date('%M:%S', time)
     if(time == 0) then
         timeStr = "--:--"
+    elseif time > 60 * 60 then
+        timeStr = "Long"
     end
     return timeStr
 end
@@ -212,12 +213,16 @@ end
 
 -- Returns the maximum element of the array. Taken from Timetables Mod
 ---@param arr table
--- returns a, the maximum element of the array
+-- returns a, the maximum element of the array. 0 otherwise
 function luaUtils.maximumArray(arr)
+    if not arr or not arr[1] then return 0 end
+
     local max = arr[1]
     for k,_ in pairs(arr) do
-        if max < arr[k] then
-            max = arr[k]
+        if arr[k] then
+            if max < arr[k] then
+                max = arr[k]
+            end
         end
     end
     return max
@@ -234,6 +239,26 @@ end
 function luaUtils.shortenToPixels(str, pixels)
     local maxLength = math.floor(pixels/7) -2
     return luaUtils.shortenName(str, maxLength)
+end
+
+-- Orders For table:setOrder method. Inspired by Timetables Mod
+---@param arr [table] an array to sort
+---@param sortFn function sorting function
+---@return [number] --an Array where the index it the source element and the number is the target position
+function luaUtils.getOrderOfArray(arr, sortFn)
+    local toSort = {}
+    for k,v in pairs(arr) do
+        toSort[k] = {key =  k, value = v}
+    end
+
+    table.sort(toSort, sortFn)
+
+    local res = {}
+    for k,v in pairs(toSort) do
+        res[k-1] = v.key-1
+    end
+
+    return res
 end
 
 return luaUtils

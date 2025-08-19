@@ -23,23 +23,23 @@ function lineGui.createGui(lineId)
     print("Line " .. lineIdStr)
     local lineGuiId = "lineInfo.lineUi.floatingLayout." .. lineIdStr
 
+    if !gameApiUtils.entityExists(lineId) then
+        print("Line does not exist anymore")
+        return
+    end
+
     if lineWindows[lineId] then
-        print("already created")
+        print("Already created line window")
         -- Cache the list of vehicles for use later
         vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
 
-        lineWindows[lineId]:setVisible(true, true)
         lineGui.fillStationTable(lineId, stationTables[lineId])
         detailsTables[lineId]:deleteAll()
         lineVehTables[lineId]:deleteAll()
         stnConxTables[lineId]:deleteAll()
-        
-        print(string.format("lineGui.createGui (reopen). Elapsed time: %.4f\n", os.clock() - start_time))
+        lineWindows[lineId]:setVisible(true, true)
 
-        -- this didn't work
-        -- local oldLineWindow = api.gui.util.downcast(api.gui.util.getById(lineGuiId))
-        -- print(oldLineWindow)
-        -- oldLineWindow:setVisible(true, true)
+        print(string.format("lineGui.createGui (reopen). Elapsed time: %.4f\n", os.clock() - start_time))
         return
     end
 
@@ -80,9 +80,19 @@ function lineGui.createGui(lineId)
     stationTable:onSelect(function (tableIndex)
         if not (tableIndex == -1) then
             print(tostring(tableIndex))
-            lineGui.fillDetailsTable(tableIndex, lineId, detailsTables[lineId])
-            lineGui.fillConxTable(tableIndex, lineId, stnConxTables[lineId])
-            lineGui.fillVehTableForSection(tableIndex, lineId, lineVehTables[lineId])
+            local success, res = pcall(function()
+                if gameApiUtils.entityExists(lineId) then
+                    lineGui.fillDetailsTable(tableIndex, lineId, detailsTables[lineId])
+                    lineGui.fillConxTable(tableIndex, lineId, stnConxTables[lineId])
+                    lineGui.fillVehTableForSection(tableIndex, lineId, lineVehTables[lineId])
+                else
+                    print("Entity does not exist anymore: " .. tostring(lineId))
+                end
+            end)
+
+            if not success then
+                print("stationTable:onSelect - ERROR: " .. tostring(res))
+            end
         end
     end)
 
@@ -93,7 +103,7 @@ function lineGui.createGui(lineId)
 
     print("create window ")
     local lineName = gameApiUtils.getEntityName(lineId)
-    local lineWindow =  uiUtil.createWindow("Line Details: " .. lineName, lineFloatLayout, 965, 650, false)
+    local lineWindow =  uiUtil.createWindow("Line Details: " .. lineName, lineFloatLayout, 915, 650, false)
     lineWindow:setId("lineInfo.lineUi.lineWindow."  .. lineIdStr)
     lineWindow:setPosition(200,400)
 
@@ -108,22 +118,21 @@ end
 
 function lineGui.createStationsTable()
     print("createStationsTable")
-    local stationTable = api.gui.comp.Table.new(7, 'SINGLE')
+    local stationTable = api.gui.comp.Table.new(6, 'SINGLE')
     stationTable:setColWidth(0,40)
     stationTable:setColWidth(1,260)
     stationTable:setColWidth(2,80)
     stationTable:setColWidth(3,80)
     stationTable:setColWidth(4,80)
-    stationTable:setColWidth(5,80)
-    stationTable:setColWidth(6,50)
+    stationTable:setColWidth(5,50)
     return stationTable
 end
 
 function lineGui.createStationsArea(lineIdStr, stationTable)
     print("createStationsArea ")
     local stationScrollArea = api.gui.comp.ScrollArea.new(stationTable, "lineInfo.lineUi.stationScrollArea".. lineIdStr)
-    stationScrollArea:setMinimumSize(api.gui.util.Size.new(670, 580))
-    stationScrollArea:setMaximumSize(api.gui.util.Size.new(670, 580))
+    stationScrollArea:setMinimumSize(api.gui.util.Size.new(620, 580))
+    stationScrollArea:setMaximumSize(api.gui.util.Size.new(620, 580))
     return stationScrollArea
 end
 
@@ -161,7 +170,7 @@ function lineGui.fillStationTable(lineId, stationTable)
     stationTable:deleteAll()
 
     -- Data
-    local lineStats = lineStatsHelper.getPassengerStatsForLine(lineId)
+    local lineStats = lineStatsHelper.getPassengerStatsForLine(lineId, {})
     if not lineStats then
         local header1 = api.gui.comp.TextView.new("ERROR")
         local header2 = api.gui.comp.TextView.new("")
@@ -169,8 +178,7 @@ function lineGui.fillStationTable(lineId, stationTable)
         local header4 = api.gui.comp.TextView.new("")
         local header5 = api.gui.comp.TextView.new("")
         local header6 = api.gui.comp.TextView.new("")
-        local header7 = api.gui.comp.TextView.new("")
-        stationTable:setHeader({header1,header2, header3, header4, header5, header6, header7})
+        stationTable:setHeader({header1,header2, header3, header4, header5, header6})
         return
     end
 
@@ -178,12 +186,11 @@ function lineGui.fillStationTable(lineId, stationTable)
 
     local header1 = api.gui.comp.TextView.new(lineStatsTxt)
     local header2 = api.gui.comp.TextView.new("")
-    local header3 = api.gui.comp.TextView.new("Avg Wait")
+    local header3 = api.gui.comp.TextView.new("Distance")
     local header4 = api.gui.comp.TextView.new("Wait: " .. lineStats.waitingCount)
     local header5 = api.gui.comp.TextView.new("Journey")
-    local header6 = api.gui.comp.TextView.new("Distance")-- to swap
-    local header7 = api.gui.comp.TextView.new("")
-    stationTable:setHeader({header1,header2, header6, header3,header4, header5, header7})
+    local header6 = api.gui.comp.TextView.new("")
+    stationTable:setHeader({header1,header2, header3, header4, header5, header6})
 
     --iterate over all stations to display them
     local lineImage = {}
@@ -204,9 +211,6 @@ function lineGui.fillStationTable(lineId, stationTable)
         local lblStartStn = uiUtil.makeLocateText(stationInfo.station.id, luaUtils.shortenName(stationInfo.station.name, 33))
         local lblEndStn = uiUtil.makeLocateText(stationInfo.nextStation.id, "> " .. luaUtils.shortenName(stationInfo.nextStation.name, 30))
         local compStationNames =  uiUtil.makeVertical(lblStartStn, lblEndStn)
-
-        -- Wait time col
-        local lblAvgWaitTime = api.gui.comp.TextView.new(luaUtils.getTimeStr(lineStats.stopAvgWaitTimes[stnIdx]))
 
         -- Passenger Waiting col 
         local compTotalWaiting = uiUtil.makeIconText(tostring(lineStats.peopleAtStop[stnIdx]), "ui/hud/cargo_passengers.tga")
@@ -237,9 +241,9 @@ function lineGui.fillStationTable(lineId, stationTable)
         -- Distance column
         local lblDistance = api.gui.comp.TextView.new(string.format("%.1f km", stationInfo.distanceKm))
         local lblSpeed = api.gui.comp.TextView.new(stationInfo.avgSpeedStr)
-        local compDist = uiUtil.makeVertical(lblDistance,lblSpeed)
+        local compDist = uiUtil.makeVertical(lblSpeed,lblDistance)
 
-        stationTable:addRow({lblStationNumber, compStationNames, compDist, lblAvgWaitTime, compPplWaiting, compJurney, lineImage[stnIdx]})
+        stationTable:addRow({lblStationNumber, compStationNames, compDist, compPplWaiting, compJurney, lineImage[stnIdx]})
     end
 
     lineImgsForLine[lineId] = lineImage

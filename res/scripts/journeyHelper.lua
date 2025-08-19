@@ -1,5 +1,6 @@
 local vehiclesHelper = require "vehiclesHelper"
 local luaUtils = require "luaUtils"
+local gameApiUtils = require "gameApiUtils"
 
 local journeyHelper = {}
 
@@ -18,9 +19,13 @@ function journeyHelper.getLegTimes(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return {} end
 
+    local lineComp = gameApiUtils.getLineComponent(lineId)
+    if not lineComp then
+        return {}
+    end
+
     local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
     local noOfVeh = #vehiclesForLine
-    local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
     local noOfStops = #lineComp.stops
 
     -- Create a matrix[leg][vehicleLegTime]. 
@@ -29,9 +34,10 @@ function journeyHelper.getLegTimes(lineId)
 
     for vehIdx, vehicleId in pairs(vehiclesForLine) do
         local sectionTimes = vehiclesHelper.getSectionTimesFromVeh(vehicleId)
-        if sectionTimes then      
+        if sectionTimes then  
             -- Noticed a bug where when do `for .. pairs(sectionTimes)`, that there are sometimes additional entries and an infinite loop
             -- aka a memory leak. Can't see what's causing it as it happens on a lineIds that worked fine seconds ago
+            -- Maybe this is a sparse array? or the userdata issue?
             -- We'll play defensive do a for loop on noOfStops
             for legIdx = 1, noOfStops do
                 local legTime = sectionTimes[legIdx]

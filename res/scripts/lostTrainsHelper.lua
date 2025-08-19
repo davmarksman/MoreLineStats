@@ -73,8 +73,8 @@ end
 function lostTrainsHelper.resetLostTrains()
   local lostVehicles = lostTrainsHelper.findLostTrains();
 
-  for vehicleId, timeSinceDep in pairs(lostVehicles) do
-    local vehComp = vehiclesHelper.getVehicle(vehicleId)
+  for vehicleId, _ in pairs(lostVehicles) do
+    local vehComp = gameApiUtils.getVehicleComponent(vehicleId)
     if vehComp and vehComp.state then
       lostTrainsHelper.restTrain(vehicleId, vehComp)
     end

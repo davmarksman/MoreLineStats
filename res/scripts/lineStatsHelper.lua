@@ -10,20 +10,22 @@ local lineStatsHelper = {}
 -------------------------------------------------------------
 
 --- Gets the stats for all lines
+---@return [table] --array of line stats
 function lineStatsHelper.getPassengerStatsForAllLines()
     local lines = lineStatsHelper.getAllPassengerLines()
     local res = {}
+    local stationsCache = {}
 
     for _, lineId in pairs(lines) do
        local success, returnedData = xpcall(function()
-            return lineStatsHelper.getPassengerStatsForLine(lineId)
+            return lineStatsHelper.getPassengerStatsForLine(lineId, stationsCache)
         end, function()
             print('Line Id: ' .. tostring(lineId) .. " failed")
         end)
 
-        if success == true then
+        if success == true and returnedData then
             print("Line Id: " .. tostring(lineId) .. " succeeded")
-            res[lineId] = returnedData
+            table.insert(res, returnedData)
         end
     end
     return res
@@ -33,15 +35,23 @@ end
 ---@return table |nil -- {lineId,lineName,noOfStops,vehicleTypeStr,lineFreq,lineFreqStr,stationLegTimes,lineCapacity,
 --vehiclePositions,stationInfos,totalCount,waitingCount,inVehCount,peopleAtStop,
 --peopleAtStopLongWait,stopAvgWaitTimes,legDemand }
-function lineStatsHelper.getPassengerStatsForLine(lineId)
+function lineStatsHelper.getPassengerStatsForLine(lineId, stationsLocCache)
     if type(lineId) == "string" then line = tonumber(lineId) end
-    if not(type(lineId) == "number") then return nil end 
+    if not(type(lineId) == "number") then return nil end
 
-    local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
-    local lineEntity = game.interface.getEntity(lineId)
+    if not stationsLocCache then
+        stationsLocCache = {}
+    end
 
-    if not lineComp or not lineEntity then
+    local lineComp = gameApiUtils.getLineComponent(lineId)
+    if not lineComp then
         print("lineStatsHelper.getPassengerStatsForLine: Invalid lineId: " .. tostring(lineId))
+        return nil
+    end
+
+    local lineEntity = game.interface.getEntity(lineId)
+    if not lineEntity then
+        print("lineStatsHelper.getPassengerStatsForLine: Invalid entity for lineId: " .. tostring(lineId))
         return nil
     end
 
@@ -62,12 +72,11 @@ function lineStatsHelper.getPassengerStatsForLine(lineId)
     res.stationLegTimes = journeyHelper.getLegTimes(lineId)
     res.lineCapacity = lineStatsHelper.getLineCapacity(lineId)
     res.vehiclePositions = lineStatsHelper.getAggregatedVehLocs(lineId)
-    res.stationInfos = stationsHelper.getStationInfo(lineId)
+    res.stationInfos = stationsHelper.getStationInfo(lineId, stationsLocCache)
     res.vehicleCount = lineStatsHelper.getVehicleCount(lineId)
 
     lineStatsHelper.calcDistanceAndSpeeds(res)
     lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
-
     return res
 end
 
@@ -189,31 +198,37 @@ function lineStatsHelper.getVehicleLocations(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return {} end
 
-    local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
-    local lastStopOnLineIdx = #stationsHelper.getAllStations(lineId)
-    local res = {}
+    if gameApiUtils.entityExists(lineId) then
+        local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
+        local lastStopOnLineIdx = #stationsHelper.getAllStations(lineId)
+        local res = {}
 
-    for _,vehicleId in pairs(vehiclesForLine) do
-        local vehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
-        local atTerminal = vehicle.state == api.type.enum.TransportVehicleState.AT_TERMINAL
+        for _,vehicleId in pairs(vehiclesForLine) do
+            local vehicle = gameApiUtils.getVehicleComponent(vehicleId)
+            if vehicle then
+                local atTerminal = vehicle.state == api.type.enum.TransportVehicleState.AT_TERMINAL
 
-        local lineStopIdx = vehicle.stopIndex
-        if atTerminal == true then
-            lineStopIdx = vehicle.stopIndex + 1
-        elseif vehicle.stopIndex == 0 then
-            lineStopIdx = lastStopOnLineIdx
+                local lineStopIdx = vehicle.stopIndex
+                if atTerminal == true then
+                    lineStopIdx = vehicle.stopIndex + 1
+                elseif vehicle.stopIndex == 0 then
+                    lineStopIdx = lastStopOnLineIdx
+                end
+
+                if not res[lineStopIdx] then
+                    res[lineStopIdx] = {}
+                end
+                table.insert(res[lineStopIdx], {
+                    vehicleId = vehicleId,
+                    atTerminal = atTerminal
+                })
+            end
         end
-
-        if not res[lineStopIdx] then
-            res[lineStopIdx] = {}
-        end
-        table.insert(res[lineStopIdx], {
-            vehicleId = vehicleId,
-            atTerminal = atTerminal
-        })
+        return res
+    else
+        print("lineId no longer exists: ")
+        return {}
     end
-
-    return res
 end
 
 ---Based off timetableHelper.getAllLines
@@ -301,22 +316,22 @@ function lineStatsHelper.isPassengerLine(lineId)
     if not(type(lineId) == "number") then return false end
 
     -- Short cut
-    local start_time = os.clock()
+    -- local start_time = os.clock()
     local lineEntity = game.interface.getEntity(lineId)
     if lineEntity and lineEntity.itemsTransported and lineEntity.itemsTransported["PASSENGERS"] then
         if lineEntity.itemsTransported["PASSENGERS"] > 0 then
-            print(string.format("lineStatsHelper.isPassengerLine, Entity, Elapsed time: %.5f\n", os.clock() - start_time))
+            -- print(string.format("lineStatsHelper.isPassengerLine, Entity, Elapsed time: %.5f\n", os.clock() - start_time))
             return true
         end
     end
 
     -- Try using vehicles
-    local start_time2 = os.clock()
+    -- local start_time2 = os.clock()
     local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
     if vehiclesForLine and vehiclesForLine[1] then
         local vehicleId = vehiclesForLine[1]
 
-        local vehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
+        local vehicle = gameApiUtils.getVehicleComponent(vehicleId)
         if not vehicle or not vehicle.config or not vehicle.config.capacities then
             return false
         end
@@ -324,7 +339,7 @@ function lineStatsHelper.isPassengerLine(lineId)
         local passengers = vehicle.config.capacities[1] -- (PASSENGERS)
         return passengers > 0
     end
-    print(string.format("lineStatsHelper.isPassengerLine, Veh, Elapsed time: %.5f\n", os.clock() - start_time2))
+    -- print(string.format("lineStatsHelper.isPassengerLine, Veh, Elapsed time: %.5f\n", os.clock() - start_time2))
 
     return false
 end
@@ -340,10 +355,7 @@ function lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
     res.inVehCount = 0
     res.peopleAtStop = luaUtils.createOneBasedArray(noOfStops, 0)
     res.peopleAtStopLongWait = luaUtils.createOneBasedArray(noOfStops, 0)
-    res.stopAvgWaitTimes = luaUtils.createOneBasedArray(noOfStops, 0)
     res.legDemand = luaUtils.createOneBasedArray(noOfStops, 0)
-
-    local stopWaitTimes = luaUtils.createOneBasedArray(noOfStops, 0)
 
     for _, personId in pairs(personsForLineArr) do 
         local simEntityAtTerminal = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
@@ -358,7 +370,7 @@ function lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
                 res.waitingCount  = res.waitingCount + 1
                 res.peopleAtStop[stopNo] = res.peopleAtStop[stopNo] + 1
                 local waitTime = gameTime - luaUtils.getTimeInSecs(simEntityAtTerminal.arrivalTime)
-                stopWaitTimes[stopNo] = stopWaitTimes[stopNo] + waitTime
+
                 if lineFreq > 60  and waitTime > lineFreq + 60 then
                     res.peopleAtStopLongWait[stopNo] =  res.peopleAtStopLongWait[stopNo] + 1
                 elseif lineFreq < 60 and waitTime > 5 * 60 then
@@ -379,9 +391,9 @@ function lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
         end
     end
 
-    for stopNo, count in pairs(res.peopleAtStop) do
-        res.stopAvgWaitTimes[stopNo] = luaUtils.safeDivide(stopWaitTimes[stopNo], count)
-    end
+    res.maxAtStop = luaUtils.maximumArray(res.peopleAtStop)
+    res.maxLongWait = luaUtils.maximumArray(res.peopleAtStopLongWait)
+
     return res
 end
 

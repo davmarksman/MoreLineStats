@@ -13,7 +13,7 @@ local vehiclesHelper = {}
 function vehiclesHelper.getTrains(vehicleIds)
     local matrix={}
     for _, vehicleId in pairs(vehicleIds) do
-        local vehicle = vehiclesHelper.getVehicle(vehicleId)
+        local vehicle = gameApiUtils.getVehicleComponent(vehicleId)
         if vehicle and vehicle.carrier and vehicle.line then
             if vehicle.carrier == api.type.enum.JournalEntryCarrier.RAIL then
                 matrix[vehicleId] = vehicle
@@ -24,26 +24,9 @@ function vehiclesHelper.getTrains(vehicleIds)
 end
 
 ---@param vehicleId number | string
--- returns https://transportfever2.com/wiki/api/modules/api.type.html#TransportVehicle
-function vehiclesHelper.getVehicle(vehicleId) 
-    if type(vehicleId) == "string" then vehicleId = tonumber(vehicleId) end
-    if not(type(vehicleId) == "number") then print("Expected String or Number") return {} end
-
-    local lineVehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
-    if lineVehicle and lineVehicle.carrier then
-        return lineVehicle
-    else
-        return {}
-    end
-end
-
----@param vehicleId number | string
 -- returns departure time of previous vehicle. 0 if no depature times
 function vehiclesHelper.getLastDepartureTime(vehicleId)
-    if type(vehicleId) == "string" then vehicleId = tonumber(vehicleId) end
-    if not(type(vehicleId) == "number") then print("Expected String or Number") return false end
-
-    local lineVehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE) 
+    local lineVehicle = gameApiUtils.getVehicleComponent(vehicleId)
     return vehiclesHelper.getLastDepartureTimeFromVeh(lineVehicle)
 end
 
@@ -63,29 +46,11 @@ function vehiclesHelper.getAllVehiclesEnRoute()
     return api.engine.system.transportVehicleSystem.getVehiclesWithState(api.type.enum.TransportVehicleState.EN_ROUTE)
 end
 
----@param vehicleId number | string
----@return boolean
--- returns bool
-function vehiclesHelper.isTrain(vehicleId)
-    if type(vehicleId) == "string" then vehicleId = tonumber(vehicleId) end
-    if not(type(vehicleId) == "number") then print("Expected String or Number") return false end
-
-    local lineVehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
-    if lineVehicle and lineVehicle.carrier then
-        return lineVehicle.carrier == api.type.enum.JournalEntryCarrier.RAIL
-    end
-
-    return false
-end
-
 ---gets vehicle type as api.type.enum.Carrier. Defaults to 0 (ROAD) if not known
 ---@param vehicleId number | string
 ---@return number
 function vehiclesHelper.getVehicleType(vehicleId)
-    if type(vehicleId) == "string" then vehicleId = tonumber(vehicleId) end
-    if not(type(vehicleId) == "number") then print("Expected String or Number") return 0 end
-
-    local lineVehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
+    local lineVehicle = gameApiUtils.getVehicleComponent(vehicleId)
     if lineVehicle and lineVehicle.carrier then
         return lineVehicle.carrier
     end
@@ -97,22 +62,13 @@ end
 ---@param vehicleId number | string
 -- returns vehicle name
 function vehiclesHelper.getVehicleName(vehicleId)
-    if type(vehicleId) == "string" then vehicleId = tonumber(vehicleId) end
-    if not(type(vehicleId) == "number") then print("Expected String or Number") return false end
-
-    local err, res = pcall(function()
-        return api.engine.getComponent(vehicleId, api.type.ComponentType.NAME)
-    end)
-    if err and res then return res.name else return "ERROR" end
+    return gameApiUtils.getEntityName(vehicleId)
 end
 
 ---@param vehicleId number | string
 -- returns vehicle name
 function vehiclesHelper.getVehicleCapacity(vehicleId)
-    if type(vehicleId) == "string" then vehicleId = tonumber(vehicleId) end
-    if not(type(vehicleId) == "number") then print("Expected String or Number") return 0 end
-
-    local vehicle = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
+    local vehicle = gameApiUtils.getVehicleComponent(vehicleId)
     if not vehicle or not vehicle.config or not vehicle.config.capacities then
         return 0
     end
@@ -159,7 +115,7 @@ end
 ---@param vehicleId number | string
 -- returns returns line name of vehicel
 function vehiclesHelper.getLineNameOfVehicle(vehicleId)
-    local vehicle = vehiclesHelper.getVehicle(vehicleId)
+    local vehicle = gameApiUtils.getVehicleComponent(vehicleId)
     if vehicle and vehicle.line then
         return gameApiUtils.getEntityName(vehicle.line)
     else
@@ -177,14 +133,16 @@ function vehiclesHelper.getVehicles(lineId)
     return vehiclesForLine
 end
 
+---Get's section times from a vehicle
+---@param vehicleId number | string
+---@return table| nil
 function vehiclesHelper.getSectionTimesFromVeh(vehicleId)
-    local vehicleObject = api.engine.getComponent(vehicleId, api.type.ComponentType.TRANSPORT_VEHICLE)
+    local vehicleObject = gameApiUtils.getVehicleComponent(vehicleId)
     if vehicleObject and vehicleObject.sectionTimes then
         return vehicleObject.sectionTimes
     else
         return nil
     end
 end
-
 
 return vehiclesHelper

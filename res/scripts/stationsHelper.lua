@@ -11,8 +11,9 @@ local stationsHelper = {}
 
 ---Gets stations information for a line
 ---@param lineId number | string
+---@param stationsLocCache table -- cache of station locations to speed lookup
 ---@return table
-function stationsHelper.getStationInfo(lineId)
+function stationsHelper.getStationInfo(lineId, stationsLocCache)
     local toReturn = {}
     local stationsList = stationsHelper.getAllStations(lineId)
     for stnIdx, stnGpId in pairs(stationsList) do
@@ -23,8 +24,8 @@ function stationsHelper.getStationInfo(lineId)
         toReturn[stnIdx].nextStation = stationsHelper.getStationNameWithId(stationsList[nextStopIdx])
     
         -- Distance
-        local stationLoc = stationsHelper.getStationLocation(stnGpId)
-        local nextStnLoc = stationsHelper.getStationLocation(stationsList[nextStopIdx])
+        local stationLoc = stationsHelper.getStationLocation(stnGpId, stationsLocCache)
+        local nextStnLoc = stationsHelper.getStationLocation(stationsList[nextStopIdx], stationsLocCache)
 
         if stationLoc and nextStnLoc then
             toReturn[stnIdx].distance = journeyHelper.distance(
@@ -43,11 +44,8 @@ end
 ---@param lineId number | string
 -- returns [id : Number] Array of stationGroupIds. This is a 1 based index
 function stationsHelper.getAllStations(lineId)
-    if type(lineId) == "string" then lineId = tonumber(lineId) end
-    if not(type(lineId) == "number") then return {} end
-
-    local lineComp = api.engine.getComponent(lineId, api.type.ComponentType.LINE)
-    return stationsHelper.getAllStationsFromLineComponent(lineComp)
+    local lineComp = gameApiUtils.getLineComponent(lineId)
+    return stationsHelper.getAllStationsFromLineComponent(lineComp) --error handling check is done here
 end
 
 -- Gets all stations group ids on a line. Code sourced from Timetables Mod
@@ -65,14 +63,10 @@ function stationsHelper.getAllStationsFromLineComponent(lineComp)
     end
 end
 
-
 ---@param lineId number | string
 ---@param stopIdx number
 ---@return number - the next stop idx. -1 if it can't find the next stop index
 function stationsHelper.getNextStop(lineId, stopIdx)
-    if type(lineId) == "string" then lineId = tonumber(lineId) end
-    if not(type(lineId) == "number") then return "ERROR" end 
-
     local stations = stationsHelper.getAllStations(lineId)
     return stationsHelper.getNextStopFromStns(stopIdx, #stations)
 end
@@ -92,19 +86,11 @@ function stationsHelper.getNextStopFromStns(stopIdx, noOfStations)
     end
 end
 
-
 ---@param stationGroupId number | string
 ---@return table  -- {id:number , name : String}
 function stationsHelper.getStationNameWithId(stationGroupId)
-    if type(stationGroupId) == "string" then stationGroupId = tonumber(stationGroupId) end
-    if not(type(stationGroupId) == "number") then return "ERROR" end
-
-    local stationObject = api.engine.getComponent(stationGroupId, api.type.ComponentType.NAME)
-    if stationObject and stationObject.name then
-        return { id = stationGroupId, name = stationObject.name }
-    else
-        return { id = stationGroupId, name = "ERROR"}
-    end
+    local stationNameOrErrStr = gameApiUtils.getEntityName(stationGroupId)
+    return { id = stationGroupId, name = stationNameOrErrStr }
 end
 
 ---Gets the times for competing lines between a station and all other stations on the line
@@ -113,9 +99,13 @@ end
 ---@return table -- array [{ toStationId , sortedTimes = table }]
 function stationsHelper.getLineTimesFromStation(lineId, stopIdx)
     local stations = stationsHelper.getAllStations(lineId)
+    if not stations[stopIdx] then
+       return {}
+    end
+
+    local res = {}
     local startStationId = stations[stopIdx]
     local startStationLines = api.engine.system.lineSystem.getLineStops(startStationId)
-    local res = {}
     local curIdx = stationsHelper.getNextStopFromStns(stopIdx, #stations)
     local seenStns = {}
     seenStns[startStationId] = true
@@ -246,11 +236,14 @@ function stationsHelper.GetLinesThatStopAtStation(stationGroupId)
     return res
 end
 
-
 ---Get Station Location
 ---@param stationGroupId any
----@return table | nil  -- returns { x = -2,  y = -2, z = 90.708602905273, w = 1} or nil if no station found
-function stationsHelper.getStationLocation(stationGroupId)
+---@return table | nil  -- returns { x = -2, y = -2, z = 90.708602905273, w = 1} or nil if no station found
+function stationsHelper.getStationLocation(stationGroupId, stationsLocCache)
+    if stationsLocCache[stationGroupId] then
+        return stationsLocCache[stationGroupId]
+    end
+
     local success, returnedData = xpcall(function()
         return stationsHelper.getStationLocationInternal(stationGroupId)
     end, function()
@@ -258,6 +251,7 @@ function stationsHelper.getStationLocation(stationGroupId)
     end)
 
     if success == true then
+        stationsLocCache[stationGroupId] = returnedData
         return returnedData
     else
         return nil
@@ -269,7 +263,6 @@ function stationsHelper.getStationLocationInternal(stationGroupId)
 
     if stationGroupComp.stations and stationGroupComp.stations[1] then
         local stationId = stationGroupComp.stations[1]
-
         -- Get station construction
         local stationConstrId = api.engine.system.streetConnectorSystem.getConstructionEntityForStation(stationId)
         if stationConstrId and stationConstrId ~= -1 then
@@ -281,15 +274,31 @@ function stationsHelper.getStationLocationInternal(stationGroupId)
             end
         else
             -- probably a bus stop
-            local busStopEntityId = api.engine.getComponent(stationId, api.type.ComponentType.STATION).terminals[1].vehicleNodeId.entity
-            local edge = api.engine.getComponent(busStopEntityId, api.type.ComponentType.BASE_EDGE)
-            local node = api.engine.getComponent(edge.node0, api.type.ComponentType.BASE_NODE)
-            if node.position then
-                return node.position
-            end
+            local stationComp = api.engine.getComponent(stationId, api.type.ComponentType.STATION)
+            local busStopEntityId = stationComp.terminals[1].vehicleNodeId.entity
+            return stationsHelper.getMidPoint(busStopEntityId)
         end
     end
+    return nil
+end
 
+---Gets mid point of a edge (track/road segment)
+---@param edgeId number
+---@return table| nil  -- returns { x = -2, y = 2, z = 90, w = 1} or nil
+function stationsHelper.getMidPoint(edgeId)
+    local edge = api.engine.getComponent(edgeId, api.type.ComponentType.BASE_EDGE)
+    if edge then
+        local node0 = api.engine.getComponent(edge.node0, api.type.ComponentType.BASE_NODE)
+        local node1 = api.engine.getComponent(edge.node1, api.type.ComponentType.BASE_NODE)
+        if node0 and node1 and node0.position and node1.position then
+            return {
+                x = node0.position.x + (0.5 * (node1.position.x - node0.position.x)),
+                y = node0.position.y + (0.5 * (node1.position.y - node0.position.y)),
+                z = node0.position.z + (0.5 * (node1.position.z - node0.position.z)),
+                w = 1
+            }
+        end
+    end
     return nil
 end
 
