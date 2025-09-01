@@ -86,7 +86,7 @@ end
 -- returns string with vehicle passenger count / total
 function vehiclesHelper.getVehiclePassengerCountStr(vehicleId, vehicle2cargoMap) 
     if type(vehicleId) == "string" then vehicleId = tonumber(vehicleId) end
-    if not(type(vehicleId) == "number") then print("Expected String or Number") return false end
+    if not(type(vehicleId) == "number") then return false end
 
     local totalCapcity = vehiclesHelper.getVehicleCapacity(vehicleId)
     

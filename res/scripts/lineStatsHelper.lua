@@ -24,7 +24,6 @@ function lineStatsHelper.getPassengerStatsForAllLines()
         end)
 
         if success == true and returnedData then
-            print("Line Id: " .. tostring(lineId) .. " succeeded")
             table.insert(res, returnedData)
         end
     end

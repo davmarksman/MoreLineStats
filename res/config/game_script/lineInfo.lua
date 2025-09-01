@@ -15,7 +15,6 @@ function data()
                 else
                     if api.engine.getComponent(entId, api.type.ComponentType.LINE) then
                         -- TODO use function for if passenger line to determine if passenger line and add stats
-                        print("LineId", entId)
                         local isPassenger = lineStatsHelper.isPassengerLine(entId)
 
                         if isPassenger == true then

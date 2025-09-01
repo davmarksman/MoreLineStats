@@ -23,101 +23,95 @@ function lineGui.createGui(lineId)
     print("Line " .. lineIdStr)
     local lineGuiId = "lineInfo.lineUi.floatingLayout." .. lineIdStr
 
-    if !gameApiUtils.entityExists(lineId) then
-        print("Line does not exist anymore")
-        return
-    end
+    if gameApiUtils.entityExists(lineId) then
+        if lineWindows[lineId] then
+            -- Cache the list of vehicles for use later
+            vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
 
-    if lineWindows[lineId] then
-        print("Already created line window")
+            lineGui.fillStationTable(lineId, stationTables[lineId])
+            detailsTables[lineId]:deleteAll()
+            lineVehTables[lineId]:deleteAll()
+            stnConxTables[lineId]:deleteAll()
+            lineWindows[lineId]:setVisible(true, true)
+
+            return
+        end
+
+        local lineFloatLayout = api.gui.layout.FloatingLayout.new(0,1)
+        lineFloatLayout:setId(lineGuiId)
+        lineFloatLayout:setGravity(-1,-1)
+
+        local stationTable = lineGui.createStationsTable()
+        local stationScrollArea = lineGui.createStationsArea(lineIdStr, stationTable)
+        lineFloatLayout:addItem(stationScrollArea,0,0)
+
+        local lineVehTable = api.gui.comp.Table.new(1, 'SINGLE')
+        local scrollAreaVeh = lineGui.createVehArea(lineIdStr, lineVehTable)
+        lineFloatLayout:addItem(scrollAreaVeh,1,0)
+
+        local detailsTable = lineGui.createDetailsTable()
+        local scrollAreaDetails = lineGui.createDetailsArea(lineIdStr, detailsTable)
+        lineFloatLayout:addItem(scrollAreaDetails,1,0.5)
+
+        local stnConxTable = api.gui.comp.Table.new(1, 'SINGLE')
+        local scrollAreaConx = lineGui.createConnectionsArea(lineIdStr, stnConxTable)
+        lineFloatLayout:addItem(scrollAreaConx,1,1)
+
+
+        local refreshDataBtn = uiUtil.createButton("Refresh Data")
+        refreshDataBtn:onClick(function ()
+            lineGui.createGui(lineId)
+        end)
+
+        local resetTrainsButton = uiUtil.createButton("Reset Trains")
+        resetTrainsButton:onClick(function ()
+            lostTrainsHelper.resetAllTrainsOnLine(lineId)
+        end)
+        local compActions = uiUtil.makeHorizontal(refreshDataBtn, resetTrainsButton)
+        lineFloatLayout:addItem(compActions, 0,1)
+
+        -- Station/leg details (Right Column)
+        stationTable:onSelect(function (tableIndex)
+            if not (tableIndex == -1) then
+                local success, res = pcall(function()
+                    if gameApiUtils.entityExists(lineId) then
+                        lineGui.fillDetailsTable(tableIndex, lineId, detailsTables[lineId])
+                        lineGui.fillConxTable(tableIndex, lineId, stnConxTables[lineId])
+                        lineGui.fillVehTableForSection(tableIndex, lineId, lineVehTables[lineId])
+                    else
+                        print("Entity does not exist anymore: " .. tostring(lineId))
+                    end
+                end)
+
+                if not success then
+                    print("stationTable:onSelect - ERROR: " .. tostring(res))
+                end
+            end
+        end)
+
+        lineGui.fillStationTable(lineId, stationTable)
+
         -- Cache the list of vehicles for use later
         vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
 
-        lineGui.fillStationTable(lineId, stationTables[lineId])
-        detailsTables[lineId]:deleteAll()
-        lineVehTables[lineId]:deleteAll()
-        stnConxTables[lineId]:deleteAll()
-        lineWindows[lineId]:setVisible(true, true)
+        local lineName = gameApiUtils.getEntityName(lineId)
+        local lineWindow =  uiUtil.createWindow("Line Details: " .. lineName, lineFloatLayout, 915, 650, false)
+        lineWindow:setId("lineInfo.lineUi.lineWindow."  .. lineIdStr)
+        lineWindow:setPosition(200,400)
 
-        print(string.format("lineGui.createGui (reopen). Elapsed time: %.4f\n", os.clock() - start_time))
-        return
+        lineWindows[lineId] = lineWindow
+        stationTables[lineId] = stationTable
+        lineVehTables[lineId] = lineVehTable
+        stnConxTables[lineId] = stnConxTable
+        detailsTables[lineId] = detailsTable
+
+        print(string.format("lineGui.createGui. Elapsed time: %.4f\n", os.clock() - start_time))
+    else
+        print("Line does not exist anymore")
     end
-
-    local lineFloatLayout = api.gui.layout.FloatingLayout.new(0,1)
-    lineFloatLayout:setId(lineGuiId)
-    lineFloatLayout:setGravity(-1,-1)
-
-    local stationTable = lineGui.createStationsTable()
-    local stationScrollArea = lineGui.createStationsArea(lineIdStr, stationTable)
-    lineFloatLayout:addItem(stationScrollArea,0,0)
-
-    local lineVehTable = api.gui.comp.Table.new(1, 'SINGLE')
-    local scrollAreaVeh = lineGui.createVehArea(lineIdStr, lineVehTable)
-    lineFloatLayout:addItem(scrollAreaVeh,1,0)
-
-    local detailsTable = lineGui.createDetailsTable()
-    local scrollAreaDetails = lineGui.createDetailsArea(lineIdStr, detailsTable)
-    lineFloatLayout:addItem(scrollAreaDetails,1,0.5)
-
-    local stnConxTable = api.gui.comp.Table.new(1, 'SINGLE')
-    local scrollAreaConx = lineGui.createConnectionsArea(lineIdStr, stnConxTable)
-    lineFloatLayout:addItem(scrollAreaConx,1,1)
-
-
-    local refreshDataBtn = uiUtil.createButton("Refresh Data")
-	refreshDataBtn:onClick(function ()
-        lineGui.createGui(lineId)
-    end)
-
-    local resetTrainsButton = uiUtil.createButton("Reset Trains")
-	resetTrainsButton:onClick(function ()
-        lostTrainsHelper.resetAllTrainsOnLine(lineId)
-    end)
-    local compActions = uiUtil.makeHorizontal(refreshDataBtn, resetTrainsButton)
-    lineFloatLayout:addItem(compActions, 0,1)
-
-    -- Station/leg details (Right Column)
-    stationTable:onSelect(function (tableIndex)
-        if not (tableIndex == -1) then
-            print(tostring(tableIndex))
-            local success, res = pcall(function()
-                if gameApiUtils.entityExists(lineId) then
-                    lineGui.fillDetailsTable(tableIndex, lineId, detailsTables[lineId])
-                    lineGui.fillConxTable(tableIndex, lineId, stnConxTables[lineId])
-                    lineGui.fillVehTableForSection(tableIndex, lineId, lineVehTables[lineId])
-                else
-                    print("Entity does not exist anymore: " .. tostring(lineId))
-                end
-            end)
-
-            if not success then
-                print("stationTable:onSelect - ERROR: " .. tostring(res))
-            end
-        end
-    end)
-
-    lineGui.fillStationTable(lineId, stationTable)
-
-    -- Cache the list of vehicles for use later
-    vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
-
-    print("create window ")
-    local lineName = gameApiUtils.getEntityName(lineId)
-    local lineWindow =  uiUtil.createWindow("Line Details: " .. lineName, lineFloatLayout, 915, 650, false)
-    lineWindow:setId("lineInfo.lineUi.lineWindow."  .. lineIdStr)
-    lineWindow:setPosition(200,400)
-
-    lineWindows[lineId] = lineWindow
-    stationTables[lineId] = stationTable
-    lineVehTables[lineId] = lineVehTable
-    stnConxTables[lineId] = stnConxTable
-    detailsTables[lineId] = detailsTable
-
-    print(string.format("lineGui.createGui. Elapsed time: %.4f\n", os.clock() - start_time))
 end
 
 function lineGui.createStationsTable()
-    print("createStationsTable")
     local stationTable = api.gui.comp.Table.new(6, 'SINGLE')
     stationTable:setColWidth(0,40)
     stationTable:setColWidth(1,260)
@@ -129,7 +123,6 @@ function lineGui.createStationsTable()
 end
 
 function lineGui.createStationsArea(lineIdStr, stationTable)
-    print("createStationsArea ")
     local stationScrollArea = api.gui.comp.ScrollArea.new(stationTable, "lineInfo.lineUi.stationScrollArea".. lineIdStr)
     stationScrollArea:setMinimumSize(api.gui.util.Size.new(620, 580))
     stationScrollArea:setMaximumSize(api.gui.util.Size.new(620, 580))
@@ -196,7 +189,6 @@ function lineGui.fillStationTable(lineId, stationTable)
     local lineImage = {}
     local vehicleType = string.lower(lineStats.vehicleTypeStr)
 
-    print("station loop ")
     for stnIdx, stationInfo in pairs(lineStats.stationInfos) do
 
         -- Vehicles on Line image(s)
@@ -256,11 +248,9 @@ function lineGui.fillStationTable(lineId, stationTable)
         if count % 100 == 0 then
             if not lineImgsForLine[lineId] then print("ERRROR") return end
 
-            print('lineImage update lineId ' .. tostring(lineId))
 
             local vehiclePositionsUpdate = lineStatsHelper.getAggregatedVehLocs(lineId)
             if not vehiclePositionsUpdate then
-                print("ERROR - vehiclePositionsUpdate is nil")
                 return
             end
 

@@ -189,7 +189,7 @@ function stationsHelper.getTimeBetweenStations(lineId, startStationId, endStatio
                     local legTime = stationLegTime[i]
                     if type(legTime) == "string" then legTime = tonumber(legTime) end
                     if not(type(legTime) == "number") then
-                        print("Expected String or Number")
+                        --print("Expected String or Number")
                         return 0
                     end
 

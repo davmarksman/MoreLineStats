@@ -35,13 +35,11 @@ end
 function linesListGui.showOrCreateUi()
     print("-- showLineList --")
     if uiElems.window ~= nil then
-        print("-- init window --")
         uiElems.window:setVisible(true, true)
         uiElems.window:setPinned(true)
         return
     end
 
-    print("-- Create Tabs --")
     uiElems.floatLayoutLines = uiUtil.createFloatingLayout("lineInfo.mainUi.floatingLayoutLines")
     linesListGui.createLineFilter()
     linesListGui.createLineTableHeader()
@@ -50,7 +48,6 @@ function linesListGui.showOrCreateUi()
     uiElems.floatLayoutLost = uiUtil.createFloatingLayout("lineInfo.mainUi.floatingLayoutlostTrains")
     linesListGui.createLostTrainsTable()
 
-    print("-- Create Window --")
     -- Setting up Tabs
     uiElems.tabWidget = api.gui.comp.TabWidget.new("NORTH")
     uiUtil.addTabToWidget(uiElems.tabWidget, uiElems.floatLayoutLines, "Lines")
@@ -154,7 +151,6 @@ function linesListGui.createLineFilter()
     toggleBtns["AIR"] = api.gui.comp.ToggleButton.new(api.gui.comp.ImageView.new("ui/icons/game-menu/hud_filter_planes.tga"))
     uiElems.lineFilter:addRow({ toggleBtns["ALL"], toggleBtns["ROAD"], toggleBtns["TRAM"], toggleBtns["RAIL"], toggleBtns["WATER"], toggleBtns["AIR"] })
 
-    print("-- Filter Functions --")
     -- Filter Functions
     toggleBtns["ALL"]:onToggle(function()
         linesListGui.filterToLinesOfType("ALL", toggleBtns)
