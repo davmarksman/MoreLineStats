@@ -83,37 +83,44 @@ function lineStatsHelper.calcDistanceAndSpeeds(res)
     local totalDistance = 0
     local totalLegTime = 0
     local haveAllInfo = true;
+    local haveAllDistInfo = true;
     for stnIdx, stationInfo in pairs(res.stationInfos) do
         if res.stationLegTimes[stnIdx] and res.stationLegTimes[stnIdx] > 0 and stationInfo.distance > 0 then
             totalDistance = totalDistance + stationInfo.distance
             totalLegTime = totalLegTime + res.stationLegTimes[stnIdx]
             local avgSpeed = luaUtils.safeDivide(stationInfo.distance, res.stationLegTimes[stnIdx])
             stationInfo.avgSpeed = avgSpeed
-            -- if avgSpeed == 0 then
-            --     haveAllInfo = false;
-            --     stationInfo.avgSpeedStr =  "??? km/h"
-            -- else
-                stationInfo.avgSpeedStr = string.format("%d km/h", avgSpeed * 3.6 ) -- convert m/s to km/h
-            -- end
+            stationInfo.avgSpeedStr = string.format("%d km/h", avgSpeed * 3.6 ) -- convert m/s to km/h
+        elseif stationInfo.distance > 0 then
+            haveAllInfo = false
+            totalDistance = totalDistance + stationInfo.distance
+            stationInfo.avgSpeed = 0
+            stationInfo.avgSpeedStr = "??? km/h"
         else
             haveAllInfo = false
+            haveAllDistInfo = false
             stationInfo.avgSpeed = 0
             stationInfo.avgSpeedStr = "??? km/h"
         end
     end
 
+    -- Defaults
+    res.totalDistance = 0
+    res.totalDistanceKm = 0
+    res.totalAvgSpeed = 0
+    res.totalAvgSpeedStr = "??? km/h"
+    res.totalLegTime = 0
+
+    -- Set if have data
     if haveAllInfo then
         res.totalDistance = totalDistance
         res.totalDistanceKm = totalDistance/1000
         res.totalAvgSpeed = luaUtils.safeDivide(totalDistance, totalLegTime)
         res.totalAvgSpeedStr = string.format("%d km/h", res.totalAvgSpeed  * 3.6) -- convert m/s to km/h
         res.totalLegTime = totalLegTime
-    else
-        res.totalDistance = 0
-        res.totalDistanceKm = 0
-        res.totalAvgSpeed = 0
-        res.totalAvgSpeedStr = "??? km/h"
-        res.totalLegTime = 0
+    elseif haveAllDistInfo then
+        res.totalDistance = totalDistance
+        res.totalDistanceKm = totalDistance/1000
     end
 end
 
@@ -319,7 +326,7 @@ function lineStatsHelper.isPassengerLine(lineId)
     local lineEntity = game.interface.getEntity(lineId)
     if lineEntity and lineEntity.itemsTransported and lineEntity.itemsTransported["PASSENGERS"] then
         if lineEntity.itemsTransported["PASSENGERS"] > 0 then
-            -- print(string.format("lineStatsHelper.isPassengerLine, Entity, Elapsed time: %.5f\n", os.clock() - start_time))
+            -- print(string.format("lineStatsHelper.isPassengerLine, Entity, Elapsed time: %.5f", os.clock() - start_time))
             return true
         end
     end
@@ -338,7 +345,7 @@ function lineStatsHelper.isPassengerLine(lineId)
         local passengers = vehicle.config.capacities[1] -- (PASSENGERS)
         return passengers > 0
     end
-    -- print(string.format("lineStatsHelper.isPassengerLine, Veh, Elapsed time: %.5f\n", os.clock() - start_time2))
+    -- print(string.format("lineStatsHelper.isPassengerLine, Veh, Elapsed time: %.5f", os.clock() - start_time2))
 
     return false
 end

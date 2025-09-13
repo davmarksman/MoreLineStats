@@ -95,7 +95,7 @@ function lineGui.createGui(lineId)
         vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
 
         local lineName = gameApiUtils.getEntityName(lineId)
-        local lineWindow =  uiUtil.createWindow("Line Details: " .. lineName, lineFloatLayout, 915, 650, false)
+        local lineWindow =  uiUtil.createWindow("Line Details: " .. lineName, lineFloatLayout, 890, 650, false)
         lineWindow:setId("lineInfo.lineUi.lineWindow."  .. lineIdStr)
         lineWindow:setPosition(200,400)
 
@@ -105,7 +105,7 @@ function lineGui.createGui(lineId)
         stnConxTables[lineId] = stnConxTable
         detailsTables[lineId] = detailsTable
 
-        print(string.format("lineGui.createGui. Elapsed time: %.4f\n", os.clock() - start_time))
+        print(string.format("lineGui.createGui. Elapsed time: %.4f", os.clock() - start_time))
     else
         print("Line does not exist anymore")
     end
@@ -124,8 +124,8 @@ end
 
 function lineGui.createStationsArea(lineIdStr, stationTable)
     local stationScrollArea = api.gui.comp.ScrollArea.new(stationTable, "lineInfo.lineUi.stationScrollArea".. lineIdStr)
-    stationScrollArea:setMinimumSize(api.gui.util.Size.new(620, 580))
-    stationScrollArea:setMaximumSize(api.gui.util.Size.new(620, 580))
+    stationScrollArea:setMinimumSize(api.gui.util.Size.new(600, 580))
+    stationScrollArea:setMaximumSize(api.gui.util.Size.new(600, 580))
     return stationScrollArea
 end
 
@@ -179,7 +179,8 @@ function lineGui.fillStationTable(lineId, stationTable)
 
     local header1 = api.gui.comp.TextView.new(lineStatsTxt)
     local header2 = api.gui.comp.TextView.new("")
-    local header3 = api.gui.comp.TextView.new("Distance")
+    -- local header3 = api.gui.comp.TextView.new("<->")
+    local header3 = api.gui.comp.TextView.new(string.format("%.1f km", lineStats.totalDistanceKm))
     local header4 = api.gui.comp.TextView.new("Wait: " .. lineStats.waitingCount)
     local header5 = api.gui.comp.TextView.new("Journey")
     local header6 = api.gui.comp.TextView.new("")
@@ -319,7 +320,7 @@ function lineGui.fillConxTable(index, lineId, conxTable)
     conxTable:deleteAll()
     local lineStopIdx = index+1
 
-    local connectingLinesHeaderRow = api.gui.comp.TextView.new("              <-> Connections")
+    local connectingLinesHeaderRow = api.gui.comp.TextView.new("                 Connections")
     conxTable:addRow({connectingLinesHeaderRow})
     local stationId = stationsHelper.GetStationGroupIdForStop(lineId, lineStopIdx)
     local stationLines = stationsHelper.GetLinesThatStopAtStation(stationId)

@@ -54,7 +54,7 @@ function linesListGui.showOrCreateUi()
     uiUtil.addTabToWidget(uiElems.tabWidget, uiElems.floatLayoutLost, "Lost Trains")
 
     -- create final window
-    uiElems.window = uiUtil.createWindow("Passenger Line Statistics", uiElems.tabWidget, 1000, 680, true)
+    uiElems.window = uiUtil.createWindow("Passenger Line Statistics", uiElems.tabWidget, 1050, 680, true)
 end
 
 function linesListGui.createLostTrainsTable()
@@ -63,7 +63,7 @@ function linesListGui.createLostTrainsTable()
     uiElems.lostTrainsTable:setColWidth(1,380)
     uiElems.lostTrainsTable:setColWidth(2,200)
 
-    uiElems.scrollAreaLostTrains = uiUtil.createScrollArea(uiElems.lostTrainsTable, 1000, 550, "lineInfo.mainUi.scrollAreaLostTrains")
+    uiElems.scrollAreaLostTrains = uiUtil.createScrollArea(uiElems.lostTrainsTable, 1050, 550, "lineInfo.mainUi.scrollAreaLostTrains")
 
     local resetLostTrainsButton = uiUtil.createButton("Reset Lost Trains")
 	resetLostTrainsButton:onClick(lostTrainsHelper.resetLostTrains)
@@ -73,35 +73,37 @@ function linesListGui.createLostTrainsTable()
 end
 
 function linesListGui.createLineTable()
-    uiElems.lineTable = api.gui.comp.Table.new(10, 'SINGLE')
+    uiElems.lineTable = api.gui.comp.Table.new(11, 'SINGLE')
     uiElems.lineTable:setColWidth(0,260)
     uiElems.lineTable:setColWidth(1,80)
-    uiElems.lineTable:setColWidth(2,100)
+    uiElems.lineTable:setColWidth(2,95)
     uiElems.lineTable:setColWidth(3,80)
     uiElems.lineTable:setColWidth(4,80)
     uiElems.lineTable:setColWidth(5,80)
-    uiElems.lineTable:setColWidth(6,100)
+    uiElems.lineTable:setColWidth(6,95)
     uiElems.lineTable:setColWidth(7,80)
-    uiElems.lineTable:setColWidth(8,60)
+    uiElems.lineTable:setColWidth(8,70)
     uiElems.lineTable:setColWidth(9,60)
+    uiElems.lineTable:setColWidth(10,60)
 
-    uiElems.scrollAreaLines = uiUtil.createScrollArea(uiElems.lineTable, 1000, 530, "lineInfo.mainUi.scrollAreaLines")
+    uiElems.scrollAreaLines = uiUtil.createScrollArea(uiElems.lineTable, 1050, 530, "lineInfo.mainUi.scrollAreaLines")
     uiElems.floatLayoutLines:addItem(uiElems.scrollAreaLines,0,1)
 end
 
 function linesListGui.createLineTableHeader()
     -- Needs to match uiElems.lineTable
-    uiElems.lineHeaderTable = api.gui.comp.Table.new(10, 'SINGLE')
+    uiElems.lineHeaderTable = api.gui.comp.Table.new(11, 'SINGLE')
     uiElems.lineHeaderTable:setColWidth(0,260)
     uiElems.lineHeaderTable:setColWidth(1,80)
-    uiElems.lineHeaderTable:setColWidth(2,100)
+    uiElems.lineHeaderTable:setColWidth(2,95)
     uiElems.lineHeaderTable:setColWidth(3,80)
     uiElems.lineHeaderTable:setColWidth(4,80)
     uiElems.lineHeaderTable:setColWidth(5,80)
-    uiElems.lineHeaderTable:setColWidth(6,100)
+    uiElems.lineHeaderTable:setColWidth(6,95)
     uiElems.lineHeaderTable:setColWidth(7,80)
-    uiElems.lineHeaderTable:setColWidth(8,60)
+    uiElems.lineHeaderTable:setColWidth(8,70)
     uiElems.lineHeaderTable:setColWidth(9,60)
+    uiElems.lineHeaderTable:setColWidth(10,60)
 
     local nameBtn =  uiUtil.createButton("Line Name")
     nameBtn:onClick(linesListGui.sortByNameAlpha)
@@ -127,6 +129,9 @@ function linesListGui.createLineTableHeader()
     local journeyBtn =  uiUtil.createButton("Journey")
     journeyBtn:onClick( linesListGui.sortByJourney)
 
+    local distBtn =  uiUtil.createButton("Dist.")
+    distBtn:onClick( linesListGui.sortByDistance)
+
     local freqBtn =  uiUtil.createButton("Freq.")
     freqBtn:onClick( linesListGui.sortByFreq)
 
@@ -134,8 +139,8 @@ function linesListGui.createLineTableHeader()
     vehBtn:onClick( linesListGui.sortByVehCount)
 
     --Add filter then the column headers
-    uiElems.lineHeaderTable:addRow({uiElems.lineFilter, api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new("") })
-    uiElems.lineHeaderTable:addRow({nameBtn, demandBtn,loadBtn,waitingBtn,maxStnBtn,maxMissBtn,avgSpdBtn,journeyBtn,freqBtn,vehBtn })
+    uiElems.lineHeaderTable:addRow({uiElems.lineFilter, api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new("") })
+    uiElems.lineHeaderTable:addRow({nameBtn, demandBtn,loadBtn,waitingBtn,maxStnBtn,maxMissBtn,avgSpdBtn,journeyBtn, distBtn,freqBtn,vehBtn })
 
     uiElems.floatLayoutLines:addItem(uiElems.lineHeaderTable,0,0)
 end
@@ -281,16 +286,18 @@ function linesListGui.fillLineTable()
         local journeyTimeStr = luaUtils.getTimeStr(lineStats.totalLegTime)
         local lblJourneyTime = api.gui.comp.TextView.new(journeyTimeStr)
 
+        local lblDistance = api.gui.comp.TextView.new(string.format("%.1f km", lineStats.totalDistanceKm))
+
         local lblFrequency = api.gui.comp.TextView.new(lineStats.lineFreqStr)
         local lblVehCount = api.gui.comp.TextView.new(tostring(lineStats.vehicleCount))
 
         -- Add the row to the table
-        uiElems.lineTable:addRow({lineBtn, lblDemand, lblLoadCap, compWaiting, lblMaxStn, compLongWait, lblAvgSpeed, lblJourneyTime, lblFrequency,lblVehCount})
-        uiElems.lineTableItems[lineId] = {lineBtn, lblDemand, lblLoadCap, compWaiting, lblMaxStn, compLongWait, lblAvgSpeed, lblJourneyTime, lblFrequency,lblVehCount}
+        uiElems.lineTable:addRow({lineBtn, lblDemand, lblLoadCap, compWaiting, lblMaxStn, compLongWait, lblAvgSpeed, lblJourneyTime, lblDistance, lblFrequency,lblVehCount})
+        uiElems.lineTableItems[lineId] = {lineBtn, lblDemand, lblLoadCap, compWaiting, lblMaxStn, compLongWait, lblAvgSpeed, lblJourneyTime, lblDistance, lblFrequency,lblVehCount}
     end
 
     linesListGui.sortByNameAlpha()
-    print(string.format("linesListGui.fillLineTable. Elapsed time: %.4f\n", os.clock() - start_time))
+    print(string.format("linesListGui.fillLineTable. Elapsed time: %.4f", os.clock() - start_time))
 end
 
 function linesListGui.sortByNameAlpha()
@@ -336,6 +343,11 @@ end
 function linesListGui.sortByJourney()
     linesListGui.sortLines(function(a,b)
         return a.value.totalLegTime > b.value.totalLegTime
+    end)
+end
+function linesListGui.sortByDistance()
+    linesListGui.sortLines(function(a,b)
+        return a.value.totalDistanceKm > b.value.totalDistanceKm
     end)
 end
 function linesListGui.sortByFreq()
