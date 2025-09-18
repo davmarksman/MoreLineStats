@@ -33,6 +33,15 @@ function uiUtil.makeIconText(text, iconLoc)
     return uiUtil.makeHorizontal(personIcon, api.gui.comp.TextView.new(text))
 end	
 
+--- Text next to a icon
+---@param text string| number
+---returns text next to a  icon
+function uiUtil.txt(text)
+    if type(text) ~= "string" then text = tostring(text) end
+
+    return api.gui.comp.TextView.new(text)
+end	
+
 ---Lays out 2 ui component in a vertical layout (one below the other)
 ---@param item1 any
 ---@param item2 any

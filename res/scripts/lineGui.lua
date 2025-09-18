@@ -353,8 +353,8 @@ function lineGui.fillVehTableForSection(index, lineId, lineVehTable)
     end
 end
 
-function lineGui.createLineButton(lineId, lineName)
-    local lineBtn = uiUtil.createButton(lineName)
+function lineGui.createLineButton(lineId, btnName)
+    local lineBtn = uiUtil.createButton(btnName)
     local function openLine()
         lineGui.createGui(lineId)
     end

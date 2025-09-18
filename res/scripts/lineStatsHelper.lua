@@ -250,7 +250,7 @@ function lineStatsHelper.getAllPassengerLines()
         end
     end
 
-    print("Found " .. #res .. " passenger lines")
+    -- print("Found " .. #res .. " passenger lines")
     return res
 end
 
