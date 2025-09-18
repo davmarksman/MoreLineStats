@@ -1,0 +1,168 @@
+local gameApiUtils = require "gameApiUtils"
+local lineStatsHelper = require "lineStatsHelper"
+local stationsHelper = require "stationsHelper"
+local luaUtils = require "luaUtils"
+
+local passengerChoice = {}
+
+
+-- these are in game time
+local pollInterval = 10 -- every 10 seconds
+local cleanupInterval = 10 * 60 -- every 10 minutes
+-- local cleanupAfter = 60 * 60 -- cleanup data older than 60 minutes
+local cleanupAfter = 730 * 4 -- cleanup data older than 4 game years
+
+
+function passengerChoice.compute(stationId, state)
+  print("Passenger Choice Compute for station " .. stationId)
+  local stationData = state.lineChoices[stationId]
+
+  -- print("State last updated" .. state.lastUpdated)
+  if stationData == nil then
+    print("No data for station " .. stationId)
+    return {}
+  end
+
+  local gameTime = gameApiUtils.getTime()
+
+  local res = {}
+
+  for _, personData in pairs(stationData) do
+    -- print(personData.personId .. " at station " .. personData.stationId .. " for line " .. personData.lineId .. " stopNo " .. personData.stopNo .. " at time " .. personData.arrivalTimeSecs)
+    local key = personData.lineId .. "_" .. personData.stopNo
+    if not res[key] then
+      res[key] = {
+        lineId = personData.lineId,
+        stopNo = personData.stopNo,
+        count15 = 0,
+        count30 = 0,
+        count45 = 0,
+        count60 = 0,
+      }
+    end
+    local toUpdate =res[key]
+
+    local timeWait = gameTime - personData.arrivalTimeSecs
+    -- if timeWait < 60 * 60 and timeWait >= 45 * 60  then
+    --   toUpdate.count60 = toUpdate.count60 + 1
+    -- end
+    -- if timeWait < 45 * 60 and timeWait >= 30 * 60  then
+    --   toUpdate.count45 = toUpdate.count45 + 1
+    -- end
+    -- if timeWait < 30 * 60 and timeWait >= 15 * 60  then
+    --   toUpdate.count30 = toUpdate.count30 + 1
+    -- end
+    -- if timeWait < 15 * 60  then
+    --   toUpdate.count15 = toUpdate.count15 + 1
+    -- end 
+       
+    -- game year (730)
+    if timeWait < 730 * 4 and timeWait >= 730 * 3  then
+      toUpdate.count60 = toUpdate.count60 + 1
+    end
+    if timeWait < 730 * 3 and timeWait >= 730 * 2  then
+      toUpdate.count45 = toUpdate.count45 + 1
+    end
+    if timeWait < 730 * 2 and timeWait >= 730 then
+      toUpdate.count30 = toUpdate.count30 + 1
+    end
+    if timeWait < 730  then
+      toUpdate.count15 = toUpdate.count15 + 1
+    end
+  end
+
+  return res
+end
+
+
+function passengerChoice.record(state)
+  local gameTime = gameApiUtils.getTime()
+  if gameTime < state.lastUpdated + pollInterval then
+    return
+  end
+
+  local lastRunTime = state.lastUpdated
+  state.lastUpdated = gameTime
+  if state.lastUpdated == 0 then
+    -- skip the first run
+    state.lastCleanup = gameTime
+    return
+  end
+
+  local start_time = os.clock()
+  if gameTime > state.lastCleanup + cleanupInterval then
+    state.lastCleanup = gameTime
+    local cleanCount = 0
+    local totalCount = 0
+    for _, stationData in pairs(state.lineChoices) do
+      for key, personData in pairs(stationData) do
+        totalCount = totalCount + 1
+        local timeWait = gameTime - personData.arrivalTimeSecs
+        if timeWait > cleanupAfter  then
+          stationData[key] = nil
+          cleanCount = cleanCount + 1
+        end
+      end
+    end
+    print("Cleaned up old passengers: " .. cleanCount .. " Count at start: " .. totalCount)
+  end
+
+  local linesIds = lineStatsHelper.getAllPassengerLines()
+
+  for _, lineId in pairs(linesIds) do
+    if lineStatsHelper.getLineTypeStr(lineId) == "RAIL" then
+      local psgWaitingForLine = passengerChoice.getNewPassengersWaitingForLine(lineId, lastRunTime, state.lastUpdated)
+
+      for _, personData in pairs(psgWaitingForLine) do
+        local station = state.lineChoices[personData.stationId]
+        if station == nil then
+          -- print("New Station: " .. personData.stationId)
+          station = {}
+          state.lineChoices[personData.stationId] = station
+        end
+
+        if station[personData.personId] == nil then
+          -- print(personData.personId .. " at station " .. personData.stationId .. " for line " .. personData.lineId .. " stopNo " .. personData.stopNo .. " at time " .. personData.arrivalTimeSecs)
+          station[personData.personId] = personData
+        end
+      end
+    end
+  end
+
+  print("passengerChoice.record: " .. tostring(gameTime) .. string.format(". Elapsed time: %.4f", os.clock() - start_time))
+end
+
+function passengerChoice.getNewPassengersWaitingForLine(lineId, lastRunTime, thisRunTime)
+  -- print("getPassengersWaitingForLine" .. lineId)
+  local stationsList = stationsHelper.getAllStations(lineId)
+  local personsForLineArr = api.engine.system.simPersonSystem.getSimPersonsForLine(lineId)
+  local res = {}
+
+  for _, personId in pairs(personsForLineArr) do
+    local simEntityAtTerminal = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
+
+    -- Waiting at terminal
+    if simEntityAtTerminal then
+      local arrivalTime = luaUtils.getTimeInSecs(simEntityAtTerminal.arrivalTime)
+      if simEntityAtTerminal.line == lineId and arrivalTime > lastRunTime and arrivalTime <= thisRunTime then
+        print("Person " .. personId .. " at terminal for line " .. simEntityAtTerminal.line .. " arrivalTime " .. arrivalTime .. " lastRunTime " .. lastRunTime)
+        local stopNo = simEntityAtTerminal.lineStop0 + 1
+        -- Get station Id
+        local personData = {
+          stationId = stationsList[stopNo],
+          lineId = lineId,
+          stopNo = stopNo,
+          personId = personId,
+          arrivalTimeSecs = arrivalTime
+        }
+        table.insert(res, personData)
+      else
+        print("Skipping person " .. personId .. " at terminal for line " .. simEntityAtTerminal.line .. " arrivalTime " .. arrivalTime .. " lastRunTime " .. lastRunTime)
+      end
+    end
+  end
+
+  return res
+end
+
+return passengerChoice
