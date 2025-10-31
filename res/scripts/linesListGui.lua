@@ -5,6 +5,9 @@ local uiUtil = require "uiUtil"
 local lineGui = require "lineGui"
 local luaUtils = require "luaUtils"
 
+local windowWidth = 1070
+local colWidths = {260,75,90,95,80,80,75,95,75,70,65}
+
 local linesListGui = {}
 local uiElems = {
     window = nil,
@@ -22,7 +25,8 @@ local uiElems = {
 }
 local uiState = {
     lastSelectedFilter = "ALL", -- Default filter
-    allLinesCache = {}, -- Cache for all lines. Array
+    allLinesCache = {}, -- Cache for all lines. Array,
+    sortDesc = false, -- Sort order
 }
 
 function linesListGui.showLineList()
@@ -33,7 +37,7 @@ function linesListGui.showLineList()
 end
 
 function linesListGui.showOrCreateUi()
-    print("-- showLineList --")
+    print("-- showOrCreateUi --")
     if uiElems.window ~= nil then
         uiElems.window:setVisible(true, true)
         uiElems.window:setPinned(true)
@@ -50,11 +54,11 @@ function linesListGui.showOrCreateUi()
 
     -- Setting up Tabs
     uiElems.tabWidget = api.gui.comp.TabWidget.new("NORTH")
-    uiUtil.addTabToWidget(uiElems.tabWidget, uiElems.floatLayoutLines, "Lines")
+    uiUtil.addTabToWidget(uiElems.tabWidget, uiElems.floatLayoutLines, _("Passenger Lines"))
     uiUtil.addTabToWidget(uiElems.tabWidget, uiElems.floatLayoutLost, "Lost Trains")
 
     -- create final window
-    uiElems.window = uiUtil.createWindow("Passenger Line Statistics", uiElems.tabWidget, 1050, 680, true)
+    uiElems.window = uiUtil.createWindow("More Line Statistics", uiElems.tabWidget, windowWidth, 650, true)
 end
 
 function linesListGui.createLostTrainsTable()
@@ -63,7 +67,7 @@ function linesListGui.createLostTrainsTable()
     uiElems.lostTrainsTable:setColWidth(1,380)
     uiElems.lostTrainsTable:setColWidth(2,200)
 
-    uiElems.scrollAreaLostTrains = uiUtil.createScrollArea(uiElems.lostTrainsTable, 1050, 550, "lineInfo.mainUi.scrollAreaLostTrains")
+    uiElems.scrollAreaLostTrains = uiUtil.createScrollArea(uiElems.lostTrainsTable, windowWidth, 520, "lineInfo.mainUi.scrollAreaLostTrains")
 
     local resetLostTrainsButton = uiUtil.createButton("Reset Lost Trains")
 	resetLostTrainsButton:onClick(lostTrainsHelper.resetLostTrains)
@@ -73,74 +77,64 @@ function linesListGui.createLostTrainsTable()
 end
 
 function linesListGui.createLineTable()
-    uiElems.lineTable = api.gui.comp.Table.new(11, 'SINGLE')
-    uiElems.lineTable:setColWidth(0,260)
-    uiElems.lineTable:setColWidth(1,80)
-    uiElems.lineTable:setColWidth(2,95)
-    uiElems.lineTable:setColWidth(3,80)
-    uiElems.lineTable:setColWidth(4,80)
-    uiElems.lineTable:setColWidth(5,80)
-    uiElems.lineTable:setColWidth(6,95)
-    uiElems.lineTable:setColWidth(7,80)
-    uiElems.lineTable:setColWidth(8,70)
-    uiElems.lineTable:setColWidth(9,60)
-    uiElems.lineTable:setColWidth(10,60)
+    uiElems.lineTable = api.gui.comp.Table.new(#colWidths, 'SINGLE')
 
-    uiElems.scrollAreaLines = uiUtil.createScrollArea(uiElems.lineTable, 1050, 530, "lineInfo.mainUi.scrollAreaLines")
+    for i, width in pairs(colWidths) do
+        uiElems.lineTable:setColWidth(i-1,width)
+    end
+
+    uiElems.scrollAreaLines = uiUtil.createScrollArea(uiElems.lineTable, windowWidth, 500, "lineInfo.mainUi.scrollAreaLines")
     uiElems.floatLayoutLines:addItem(uiElems.scrollAreaLines,0,1)
 end
 
 function linesListGui.createLineTableHeader()
     -- Needs to match uiElems.lineTable
-    uiElems.lineHeaderTable = api.gui.comp.Table.new(11, 'SINGLE')
-    uiElems.lineHeaderTable:setColWidth(0,260)
-    uiElems.lineHeaderTable:setColWidth(1,80)
-    uiElems.lineHeaderTable:setColWidth(2,95)
-    uiElems.lineHeaderTable:setColWidth(3,80)
-    uiElems.lineHeaderTable:setColWidth(4,80)
-    uiElems.lineHeaderTable:setColWidth(5,80)
-    uiElems.lineHeaderTable:setColWidth(6,95)
-    uiElems.lineHeaderTable:setColWidth(7,80)
-    uiElems.lineHeaderTable:setColWidth(8,70)
-    uiElems.lineHeaderTable:setColWidth(9,60)
-    uiElems.lineHeaderTable:setColWidth(10,60)
+    uiElems.lineHeaderTable = api.gui.comp.Table.new(#colWidths, 'SINGLE')
+    for i, width in pairs(colWidths) do
+        uiElems.lineHeaderTable:setColWidth(i-1,width)
+    end
 
-    local nameBtn =  uiUtil.createButton("Line Name")
+    local nameBtn =  uiUtil.createButtonToolTip("Line", "Line Name. Click to sort")
     nameBtn:onClick(linesListGui.sortByNameAlpha)
 
-    local demandBtn =  uiUtil.createButton("Demand")
+    local demandBtn =  uiUtil.createButtonToolTip("Demand", "Total passengers on line (in vehicles + waiting). Click to sort")
     demandBtn:onClick(linesListGui.sortByDemand)
 
-    local loadBtn = uiUtil.createButton("Load/Cap")
+    local demandCapBtn =  uiUtil.createButtonToolTip("Demand %", "Demand/Capacity: Demand as a percentage of line capacity. Numbers below 100% indicate less demand than line capacity. Click to sort")
+    demandCapBtn:onClick(linesListGui.sortByDemandCap)
+
+    local loadBtn = uiUtil.createButtonToolTip("Passengers", "Passengers in vehicles (Loaded) / line capacity. Same as on the line statistics windov. Click to sort by passengers in vehicles (loaded)")
     loadBtn:onClick(linesListGui.sortByLoad)
 
-    local waitingBtn =  uiUtil.createButton("Waiting")
+    local waitingBtn =  uiUtil.createButtonToolTip("Waiting", "Passengers currently waiting at stops. Click to sort")
     waitingBtn:onClick( linesListGui.sortByWaiting)
 
-    local maxStnBtn =  uiUtil.createButton("Max Stn") -- Overcrowded stn??
+    local maxStnBtn =  uiUtil.createButtonToolTip("Busiest", "Number of passengers at the busiest stop. Click to sort")
     maxStnBtn:onClick( linesListGui.sortByMaxAtStop)
 
-    local maxMissBtn =  uiUtil.createButton("Max Miss")
-    maxMissBtn:onClick( linesListGui.sortByMaxMiss)
+    local longWaitBtn =  uiUtil.createButtonToolTip("Missed", "How many passengers have been waiting for longer than the line frequency (Aka there was not enough space on the last vehicle for them). Click to sort")
+    longWaitBtn:onClick( linesListGui.sortByLongWait)
 
-    local avgSpdBtn =  uiUtil.createButton("Avg Speed")
+    local avgSpdBtn =  uiUtil.createButtonToolTip("Avg Speed", "Average line speed between stops (as the crow flies). Click to sort")
     avgSpdBtn:onClick( linesListGui.sortBySpd)
 
-    local journeyBtn =  uiUtil.createButton("Journey")
+    local journeyBtn =  uiUtil.createButtonToolTip("Journey", "Total journey time for the line (sum of leg times between stops). Click to sort")
     journeyBtn:onClick( linesListGui.sortByJourney)
 
-    local distBtn =  uiUtil.createButton("Dist.")
+    local distBtn =  uiUtil.createButtonToolTip("Length", "Total distance between the stops of the line (as the crow flies between each stop). Click to sort")
     distBtn:onClick( linesListGui.sortByDistance)
 
-    local freqBtn =  uiUtil.createButton("Freq.")
+    local freqBtn =  uiUtil.createButtonToolTip("Freq.", "Indicates the time between two vehicles of that line in real time at normal game speed (Same as shown in line window). Click to sort")
     freqBtn:onClick( linesListGui.sortByFreq)
 
-    local vehBtn =  uiUtil.createButton("Veh")
-    vehBtn:onClick( linesListGui.sortByVehCount)
+    local refreshDataBtn = uiUtil.createButtonToolTip("Reload", "Refresh the data shown in the table")
+    refreshDataBtn:onClick(function ()
+        linesListGui.showLineList()
+    end)
 
-    --Add filter then the column headers
-    uiElems.lineHeaderTable:addRow({uiElems.lineFilter, api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new("") })
-    uiElems.lineHeaderTable:addRow({nameBtn, demandBtn,loadBtn,waitingBtn,maxStnBtn,maxMissBtn,avgSpdBtn,journeyBtn, distBtn,freqBtn,vehBtn })
+    --Add filter & refreshDataBtn then the column headers
+    uiElems.lineHeaderTable:addRow({uiElems.lineFilter,api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),refreshDataBtn })
+    uiElems.lineHeaderTable:addRow({nameBtn, demandBtn,demandCapBtn,loadBtn,waitingBtn,maxStnBtn,longWaitBtn,avgSpdBtn,journeyBtn, distBtn,freqBtn})
 
     uiElems.floatLayoutLines:addItem(uiElems.lineHeaderTable,0,0)
 end
@@ -263,7 +257,8 @@ function linesListGui.fillLineTable()
 
         -- Ui Elements
         local lineBtn = lineGui.createLineButton(lineId, shortenedLineName)
-        local lblDemand = api.gui.comp.TextView.new(tostring( lineStats.totalCount))
+        local lblDemand = api.gui.comp.TextView.new(tostring( lineStats.lineDemand))
+        local lblDemandCap = api.gui.comp.TextView.new(string.format("%.d %%", lineStats.demandCapRatio * 100))
         local lblLoadCap = api.gui.comp.TextView.new(lineStats.inVehCount .. "/" .. lineStats.lineCapacity)
         local compWaiting = uiUtil.makeIconText(tostring(lineStats.waitingCount), "ui/hud/cargo_passengers.tga")
 
@@ -275,8 +270,8 @@ function linesListGui.fillLineTable()
         end
 
         local compLongWait
-        if lineStats.maxLongWait > 0 then
-            compLongWait = uiUtil.makeIconText(tostring(lineStats.maxLongWait), "ui/clock_small@2x.tga")
+        if lineStats.longWaitCount > 0 then
+            compLongWait = uiUtil.makeIconText(tostring(lineStats.longWaitCount), "ui/clock_small@2x.tga")
         else
             compLongWait = api.gui.comp.TextView.new("")
         end
@@ -289,76 +284,102 @@ function linesListGui.fillLineTable()
         local lblDistance = api.gui.comp.TextView.new(string.format("%.1f km", lineStats.totalDistanceKm))
 
         local lblFrequency = api.gui.comp.TextView.new(lineStats.lineFreqStr)
-        local lblVehCount = api.gui.comp.TextView.new(tostring(lineStats.vehicleCount))
+        -- local lblVehCount = api.gui.comp.TextView.new(tostring(lineStats.vehicleCount))
 
         -- Add the row to the table
-        uiElems.lineTable:addRow({lineBtn, lblDemand, lblLoadCap, compWaiting, lblMaxStn, compLongWait, lblAvgSpeed, lblJourneyTime, lblDistance, lblFrequency,lblVehCount})
-        uiElems.lineTableItems[lineId] = {lineBtn, lblDemand, lblLoadCap, compWaiting, lblMaxStn, compLongWait, lblAvgSpeed, lblJourneyTime, lblDistance, lblFrequency,lblVehCount}
+        uiElems.lineTable:addRow({lineBtn, lblDemand, lblDemandCap, lblLoadCap, compWaiting, lblMaxStn, compLongWait, lblAvgSpeed, lblJourneyTime, lblDistance, lblFrequency})
+        uiElems.lineTableItems[lineId] = {lineBtn, lblDemand, lblDemandCap, lblLoadCap, compWaiting, lblMaxStn, compLongWait, lblAvgSpeed, lblJourneyTime, lblDistance, lblFrequency}
     end
 
-    linesListGui.sortByNameAlpha()
+    linesListGui.firstSort()
     print(string.format("linesListGui.fillLineTable. Elapsed time: %.4f", os.clock() - start_time))
 end
 
+
+-- Sorting functions
+function linesListGui.firstSort()
+    linesListGui.sortLines(function(a,b)
+        return string.lower(a.value.lineName) < string.lower(b.value.lineName) 
+    end)
+    uiState.sortDesc = false
+end
 function linesListGui.sortByNameAlpha()
     linesListGui.sortLines(function(a,b)
-        return string.lower(a.value.lineName) < string.lower(b.value.lineName)
+        if uiState.sortDesc then
+            return string.lower(a.value.lineName) > string.lower(b.value.lineName)
+        else
+            return string.lower(a.value.lineName) < string.lower(b.value.lineName)
+        end
     end)
 end
 function linesListGui.sortByWaiting()
-    linesListGui.sortLines(function(a,b)
-        return a.value.waitingCount > b.value.waitingCount
-    end)
-end
-function linesListGui.sortByVehCount()
-    linesListGui.sortLines(function(a,b)
-        return a.value.vehicleCount > b.value.vehicleCount
+    linesListGui.sortLinesNum(function(row)
+        return row.value.waitingCount
     end)
 end
 function linesListGui.sortByDemand()
-    linesListGui.sortLines(function(a,b)
-        return a.value.totalCount > b.value.totalCount
+    linesListGui.sortLinesNum(function(row)
+        return row.value.lineDemand
+    end)
+end
+function linesListGui.sortByDemandCap()
+    linesListGui.sortLinesNum(function(row)
+        return row.value.demandCapRatio
     end)
 end
 function linesListGui.sortByLoad()
-    linesListGui.sortLines(function(a,b)
-        return a.value.inVehCount > b.value.inVehCount
+    linesListGui.sortLinesNum(function(row)
+        return row.value.inVehCount
     end)
 end
 function linesListGui.sortByMaxAtStop()
-    linesListGui.sortLines(function(a,b)
-        return a.value.maxAtStop > b.value.maxAtStop
+    linesListGui.sortLinesNum(function(row)
+        return row.value.maxAtStop
     end)
 end
-function linesListGui.sortByMaxMiss()
-    linesListGui.sortLines(function(a,b)
-        return a.value.maxLongWait > b.value.maxLongWait
+function linesListGui.sortByLongWait()
+    linesListGui.sortLinesNum(function(row)
+        return row.value.longWaitCount
     end)
 end
 function linesListGui.sortBySpd()
-    linesListGui.sortLines(function(a,b)
-        return a.value.totalAvgSpeed > b.value.totalAvgSpeed
+    linesListGui.sortLinesNum(function(row)
+        return row.value.totalAvgSpeed
     end)
 end
 function linesListGui.sortByJourney()
-    linesListGui.sortLines(function(a,b)
-        return a.value.totalLegTime > b.value.totalLegTime
+    linesListGui.sortLinesNum(function(row)
+        return row.value.totalLegTime
     end)
 end
 function linesListGui.sortByDistance()
-    linesListGui.sortLines(function(a,b)
-        return a.value.totalDistanceKm > b.value.totalDistanceKm
+    linesListGui.sortLinesNum(function(row)
+        return row.value.totalDistanceKm
     end)
 end
 function linesListGui.sortByFreq()
-    linesListGui.sortLines(function(a,b)
-        return a.value.lineFreq > b.value.lineFreq
+    linesListGui.sortLinesNum(function(row)
+        return row.value.lineFreq
     end)
 end
 
 function linesListGui.sortLines(sortFn)
     local order = luaUtils.getOrderOfArray(uiState.allLinesCache, sortFn)
     uiElems.lineTable:setOrder(order)
+    uiState.sortDesc = not uiState.sortDesc
+end
+
+---@param fieldFn function sorting function
+function linesListGui.sortLinesNum(fieldFn)
+    local sortFn = function (a,b)
+        if uiState.sortDesc then
+            return fieldFn(a) > fieldFn(b)
+        else
+            return fieldFn(a) < fieldFn(b)
+        end
+    end
+
+    linesListGui.sortLines(sortFn)
 end
 
 return linesListGui

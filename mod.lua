@@ -16,17 +16,17 @@ function data()
 			description = _([[ 
 More Line statistics!
 
-This lightweight mod provides more statistic information about passenger lines and detects lost trains. The motivation was to make managing running multiple passenger lines between the same stations easier
+This lightweight mod provides more statistic information about passenger lines and detects lost trains. The motivation was to make managing multiple passenger lines between the same stations easier
 
 CORE FEATURES
 - Find lost trains!
-- Statistics about lines
+- Statistics about passenger lines
+- Easy access from ingame Line Window
 
 
 LOST TRAINS
 - This mod provides a list of potentially lost trains. Trains are thought to be lost when they've been travelling for longer than they should have taken to get to the next station
 - You can reset trains. It's advised to reset trains in view, or trains on affected lines after making station/track adjustments so the trains don't get lost in the first place (reseting trains reverses them 2x to recalculate their route. Trains in stations are not reset)
-- Multiple options to reset trains: Reset trains on a line from the lines's window, reset trains in view, reset all lost trains from the lost trains tab
 
 LINES
 This shows show additional stats about lines. This can be accessed from a line's window (more info button), or from the game bar. Only useful for passenger lines:
@@ -49,13 +49,13 @@ OTHER
 PERFORMANCE
 The mod is designed to be performant:
 - No background running tasks
-- The most expensive operation is calculating the stats about all passenger lines. This is calculated whenever then the line menu is opened from the game bar. That said you can bypass this and access a line from the line's window which is faster:
+- The most expensive operation is calculating all passenger lines. This is calculated whenever then the line menu is opened from the game bar. That said you can bypass this and access a line from the line's window which is very fast:
 - Accessing a line from the lines window only calculates stats for that line so it's pretty fast 
-- The stats are not live updating (apart from the vehicle locations which updates every apx 3-5 seconds). You can refresh stats at will using the refresh stats button
+- The stats are not live updating (apart from the vehicle locations which updates every apx 3-5 seconds). You can refresh stats at will using the "Refresh" button
 
 CREDITS
 - The ui and some helper functions are based off Celmi's Timetables mod
-- The locate pins and functionality for that from is taken form statistics++ by okeating. Do check that out if you want more in-depth statistics
+- The locate pins and functionality for that is taken form statistics++ by okeating. Do check that out if you want more in-depth statistics
 - Omegamezle for icons for each vehicle type
 
 REPO

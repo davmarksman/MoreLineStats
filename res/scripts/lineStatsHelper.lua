@@ -32,7 +32,7 @@ end
 
 ---@param lineId number | string
 ---@return table |nil -- {lineId,lineName,noOfStops,vehicleTypeStr,lineFreq,lineFreqStr,stationLegTimes,lineCapacity,
---vehiclePositions,stationInfos,totalCount,waitingCount,inVehCount,peopleAtStop,
+--vehiclePositions,stationInfos,lineDemand,waitingCount,inVehCount,peopleAtStop,
 --peopleAtStopLongWait,stopAvgWaitTimes,legDemand }
 function lineStatsHelper.getPassengerStatsForLine(lineId, stationsLocCache)
     if type(lineId) == "string" then line = tonumber(lineId) end
@@ -90,7 +90,7 @@ function lineStatsHelper.calcDistanceAndSpeeds(res)
             totalLegTime = totalLegTime + res.stationLegTimes[stnIdx]
             local avgSpeed = luaUtils.safeDivide(stationInfo.distance, res.stationLegTimes[stnIdx])
             stationInfo.avgSpeed = avgSpeed
-            stationInfo.avgSpeedStr = string.format("%d km/h", avgSpeed * 3.6 ) -- convert m/s to km/h
+            stationInfo.avgSpeedStr = string.format("%d ".. _("km/h"), avgSpeed * 3.6 ) -- convert m/s to km/h
         elseif stationInfo.distance > 0 then
             haveAllInfo = false
             totalDistance = totalDistance + stationInfo.distance
@@ -356,8 +356,9 @@ end
 function lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
     local gameTime = gameApiUtils.getTime()
     local personsForLineArr = api.engine.system.simPersonSystem.getSimPersonsForLine(lineId)
-    res.totalCount = 0
+    res.lineDemand = 0
     res.waitingCount = 0
+    res.longWaitCount = 0
     res.inVehCount = 0
     res.peopleAtStop = luaUtils.createOneBasedArray(noOfStops, 0)
     res.peopleAtStopLongWait = luaUtils.createOneBasedArray(noOfStops, 0)
@@ -372,15 +373,17 @@ function lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
             if simEntityAtTerminal.line == lineId then
                 local stopNo = simEntityAtTerminal.lineStop0 + 1
 
-                res.totalCount = res.totalCount + 1
+                res.lineDemand = res.lineDemand + 1
                 res.waitingCount  = res.waitingCount + 1
                 res.peopleAtStop[stopNo] = res.peopleAtStop[stopNo] + 1
                 local waitTime = gameTime - luaUtils.getTimeInSecs(simEntityAtTerminal.arrivalTime)
 
                 if lineFreq > 60  and waitTime > lineFreq + 60 then
+                    res.longWaitCount = res.longWaitCount + 1
                     res.peopleAtStopLongWait[stopNo] =  res.peopleAtStopLongWait[stopNo] + 1
                 elseif lineFreq < 60 and waitTime > 5 * 60 then
                     -- Default to 5 min if no line frequency
+                    res.longWaitCount = res.longWaitCount + 1
                     res.peopleAtStopLongWait[stopNo] =  res.peopleAtStopLongWait[stopNo] + 1
                 end
                 lineStatsHelper.recordSimJourney(simEntityAtTerminal, res.legDemand, noOfStops)
@@ -390,7 +393,7 @@ function lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
         -- On Vehicle
         if simEntityAtVeh then
             if simEntityAtVeh.line == lineId then
-                res.totalCount = res.totalCount + 1
+                res.lineDemand = res.lineDemand + 1
                 res.inVehCount = res.inVehCount + 1
                 lineStatsHelper.recordSimJourney(simEntityAtVeh, res.legDemand, noOfStops)
             end
@@ -398,7 +401,8 @@ function lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
     end
 
     res.maxAtStop = luaUtils.maximumArray(res.peopleAtStop)
-    res.maxLongWait = luaUtils.maximumArray(res.peopleAtStopLongWait)
+    -- res.maxLongWait = luaUtils.maximumArray(res.peopleAtStopLongWait)
+    res.demandCapRatio = luaUtils.safeDivide(res.lineDemand, res.lineCapacity)
 
     return res
 end

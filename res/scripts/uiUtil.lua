@@ -39,7 +39,7 @@ end
 function uiUtil.txt(text)
     if type(text) ~= "string" then text = tostring(text) end
 
-    return api.gui.comp.TextView.new(text)
+    return api.gui.comp.TextView.new(_(text))
 end	
 
 ---Lays out 2 ui component in a vertical layout (one below the other)
@@ -50,6 +50,7 @@ function uiUtil.makeVertical(item1, item2)
     local vertLayout = api.gui.layout.BoxLayout.new("VERTICAL")
     return uiUtil.createComp(vertLayout, item1, item2)
 end
+
 
 ---Lays out 2 ui component in a vertical layout (one below the other)
 ---@param item1 any
@@ -104,6 +105,13 @@ end
 function uiUtil.createButton(text)
     local textView = api.gui.comp.TextView.new(_(text))
     local button = api.gui.comp.Button.new(textView,false)
+    return button
+end
+
+function uiUtil.createButtonToolTip(text, tooltip)
+    local textView = api.gui.comp.TextView.new(_(text))
+    local button = api.gui.comp.Button.new(textView,false)
+    button:setTooltip(_(tooltip))
     return button
 end
 

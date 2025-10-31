@@ -58,7 +58,7 @@ function lineGui.createGui(lineId)
         lineFloatLayout:addItem(scrollAreaConx,1,1)
 
 
-        local refreshDataBtn = uiUtil.createButton("Refresh Data")
+        local refreshDataBtn = uiUtil.createButton("Reload Data")
         refreshDataBtn:onClick(function ()
             lineGui.createGui(lineId)
         end)
@@ -175,7 +175,7 @@ function lineGui.fillStationTable(lineId, stationTable)
         return
     end
 
-    local lineStatsTxt = "Freq: " .. lineStats.lineFreqStr .. " | Demand: " .. lineStats.totalCount .. " | Cap: " .. lineStats.inVehCount .. "/" .. lineStats.lineCapacity
+    local lineStatsTxt = "Freq: " .. lineStats.lineFreqStr .. " | Demand: " .. lineStats.lineDemand .. " | Cargo: " .. lineStats.inVehCount .. "/" .. lineStats.lineCapacity
 
     local header1 = api.gui.comp.TextView.new(lineStatsTxt)
     local header2 = api.gui.comp.TextView.new("")
@@ -204,13 +204,26 @@ function lineGui.fillStationTable(lineId, stationTable)
         local lblStartStn = uiUtil.makeLocateText(stationInfo.station.id, luaUtils.shortenName(stationInfo.station.name, 33))
         local lblEndStn = uiUtil.makeLocateText(stationInfo.nextStation.id, "> " .. luaUtils.shortenName(stationInfo.nextStation.name, 30))
         local compStationNames =  uiUtil.makeVertical(lblStartStn, lblEndStn)
+ 
+        -- Distance column
+        local lblDistance = api.gui.comp.TextView.new(string.format("%.1f km", stationInfo.distanceKm))
+        local lblSpeed = api.gui.comp.TextView.new(stationInfo.avgSpeedStr)
+        lblDistance:setTooltip("Distance between the stations (as the crow flies)")
+        lblSpeed:setTooltip("Average speed between the stations (as the crow flies)")
+        local compDist = uiUtil.makeVertical(lblSpeed,lblDistance)
 
         -- Passenger Waiting col 
         local compTotalWaiting = uiUtil.makeIconText(tostring(lineStats.peopleAtStop[stnIdx]), "ui/hud/cargo_passengers.tga")
+        compTotalWaiting:setTooltip(_("Passengers"))
 
         local compLongWait
         if lineStats.peopleAtStopLongWait[stnIdx] > 0 then
             compLongWait = uiUtil.makeIconText(tostring(lineStats.peopleAtStopLongWait[stnIdx]), "ui/clock_small@2x.tga")
+            if lineStats.lineFreq > 60 then
+                compLongWait:setTooltip("Passengers waiting longer than " .. lineStats.lineFreqStr)
+            else
+                compLongWait:setTooltip("Passengers waiting longer than 5 minutes")    
+            end
         else
             compLongWait = api.gui.comp.TextView.new("")
         end
@@ -220,21 +233,18 @@ function lineGui.fillStationTable(lineId, stationTable)
         local lblJurneyTime
         if lineStats.stationLegTimes[stnIdx] then
             lblJurneyTime = api.gui.comp.TextView.new(luaUtils.getTimeStr(lineStats.stationLegTimes[stnIdx]))
+            lblJurneyTime:setTooltip("Time taken between stations. This is an average of completed vehicle journeys between these 2 stations and is used by the game in passenger routing calculations. The game estimate for line frequency is used when this doesn't exist.")
         else
             lblJurneyTime = api.gui.comp.TextView.new("")
         end
         local compJourneyPpl
         if lineStats.legDemand[stnIdx] then
             compJourneyPpl = uiUtil.makeIconText(tostring(lineStats.legDemand[stnIdx]), "ui/passengers_dest.tga")
+            compJourneyPpl:setTooltip("Passengers travelling between these 2 stations on this line. Similar to the Destinations data layer")
         else
             compJourneyPpl = api.gui.comp.TextView.new("")
         end
         local compJurney = uiUtil.makeVertical(lblJurneyTime,compJourneyPpl)
-
-        -- Distance column
-        local lblDistance = api.gui.comp.TextView.new(string.format("%.1f km", stationInfo.distanceKm))
-        local lblSpeed = api.gui.comp.TextView.new(stationInfo.avgSpeedStr)
-        local compDist = uiUtil.makeVertical(lblSpeed,lblDistance)
 
         stationTable:addRow({lblStationNumber, compStationNames, compDist, compPplWaiting, compJurney, lineImage[stnIdx]})
     end

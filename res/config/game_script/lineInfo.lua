@@ -2,17 +2,7 @@ local lineGui = require "lineGui"
 local linesListGui = require "linesListGui"
 local lostTrainsHelper = require "lostTrainsHelper"
 local lineStatsHelper = require "lineStatsHelper"
-local passengerChoice = require "passengerChoice"
-local uiUtil = require "uiUtil"
-local stationGui = require "stationGui"
 
-
--- state for passengerChoice
-local state = {
-    arrivalCounts = {}, -- [bucket][stationId][lineId][stopNo] = count
-    lastUpdated = 0,
-    startDate = {},
-}
 
 function data()
   return {
@@ -26,7 +16,6 @@ function data()
                 else
                     -- Line
                     if api.engine.getComponent(entId, api.type.ComponentType.LINE) then
-                        -- TODO use function for if passenger line to determine if passenger line and add stats
                         local isPassenger = lineStatsHelper.isPassengerLine(entId)
 
                         if isPassenger == true then
@@ -35,25 +24,6 @@ function data()
                                 local lineBtn = lineGui.createLineButton(entId, "More Line Statistics")
                                 stWindow:getContent():addItem(lineBtn,0,0)
                             end
-                        end
-                    -- Station
-                    elseif api.engine.getComponent(entId,60) then
-                        
-                        -- print("Station. State updated at " .. state.lastUpdated)
-                        -- print("Other: " .. getStateTime())
-                        local stWindow = api.gui.util.downcast(api.gui.util.getById(id))
-                        if stWindow then
-                            local stationBtn = uiUtil.createButton("More Line Statistics")
-                            local stationId = entId
-                            stationBtn:onClick(function ()
-                                local success, err = pcall(function () 
-                                    stationGui.createGui(stationId, state)
-                                end)
-                                if err then
-                                    print(err)
-                                end
-                            end)
-                            stWindow:getContent():addItem(stationBtn,0,0)
                         end
                     end
                 end
@@ -82,8 +52,5 @@ function data()
             game.gui.boxLayout_addItem("gameInfo.layout", button.id)
             game.gui.boxLayout_addItem("gameInfo.layout", resetButton.id)
         end,
-        guiUpdate  = function()
-            passengerChoice.record(state)
-        end
     }
 end
