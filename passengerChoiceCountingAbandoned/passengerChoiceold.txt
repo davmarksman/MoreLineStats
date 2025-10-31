@@ -93,10 +93,10 @@ function passengerChoice.record(state)
   if gameTime > state.lastCleanup + cleanupInterval then
     state.lastCleanup = gameTime
     local cleanCount = 0
-    local totalCount = 0
+    local lineDemand = 0
     for _, stationData in pairs(state.lineChoices) do
       for key, personData in pairs(stationData) do
-        totalCount = totalCount + 1
+        lineDemand = lineDemand + 1
         local timeWait = gameTime - personData.arrivalTimeSecs
         if timeWait > cleanupAfter  then
           stationData[key] = nil
@@ -104,7 +104,7 @@ function passengerChoice.record(state)
         end
       end
     end
-    print("Cleaned up old passengers: " .. cleanCount .. " Count at start: " .. totalCount)
+    print("Cleaned up old passengers: " .. cleanCount .. " Count at start: " .. lineDemand)
   end
 
   local linesIds = lineStatsHelper.getAllPassengerLines()
