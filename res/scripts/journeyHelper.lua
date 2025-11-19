@@ -5,12 +5,17 @@ local gameApiUtils = require "gameApiUtils"
 local journeyHelper = {}
 
 
---- Distance between two points
+--- Distance between two points. If points are the same, returns 1 to avoid zero distances
+--- @return number
 function journeyHelper.distance(x1, y1, z1, x2, y2, z2 )
-  local dx = x1 - x2
-  local dy = y1 - y2
-  local dz = z1 - z2
-  return math.sqrt ( dx * dx + dy * dy + dz*dz )
+    if x1 == x2 and y1 == y2 and z1 == z2 then
+        return 1
+    end
+
+    local dx = x1 - x2
+    local dy = y1 - y2
+    local dz = z1 - z2
+    return math.sqrt ( dx * dx + dy * dy + dz*dz )
 end
 
 ---@param lineId number | string
@@ -24,7 +29,16 @@ function journeyHelper.getLegTimes(lineId)
         return {}
     end
 
-    local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
+    local vehiclesForLine = vehiclesHelper.getVehicleIds(lineId)
+
+    return journeyHelper.getLegTimesFromLineComp(lineComp,vehiclesForLine)
+end
+
+
+
+---@param lineComp table, 
+---@param vehiclesForLine table
+function journeyHelper.getLegTimesFromLineComp(lineComp,vehiclesForLine)
     local noOfVeh = #vehiclesForLine
     local noOfStops = #lineComp.stops
 

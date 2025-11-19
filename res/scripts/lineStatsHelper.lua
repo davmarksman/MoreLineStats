@@ -6,7 +6,7 @@ local journeyHelper = require "journeyHelper"
 local lineStatsHelper = {}
 
 -------------------------------------------------------------
----------------------- All stats about line -----------------
+------ Entry point to get stats about line(s) ---------------
 -------------------------------------------------------------
 
 --- Gets the stats for all lines
@@ -55,28 +55,109 @@ function lineStatsHelper.getPassengerStatsForLine(lineId, stationsLocCache)
     end
 
     local noOfStops = #lineComp.stops
-
-    local lineFreq = 0
-    if lineEntity.frequency then
-        lineFreq = luaUtils.safeDivide(1, lineEntity.frequency)
-    end
+    local vehiclesForLine = vehiclesHelper.getVehicleIds(lineId)
+    local lineFreq = lineStatsHelper.getLineFreq(lineEntity)
 
     local res = {}
     res.lineId = lineId
     res.lineName = lineEntity.name
     res.noOfStops = noOfStops
-    res.vehicleTypeStr = lineStatsHelper.getLineTypeStr(lineId)
+    res.vehicleTypeStr = lineStatsHelper.getLineTypeStr(vehiclesForLine)
     res.lineFreq = lineFreq
     res.lineFreqStr = luaUtils.getTimeStr(lineFreq)
-    res.stationLegTimes = journeyHelper.getLegTimes(lineId)
-    res.lineCapacity = lineStatsHelper.getLineCapacity(lineId)
+    res.stationLegTimes = journeyHelper.getLegTimesFromLineComp(lineComp, vehiclesForLine)
+    res.lineCapacity = lineStatsHelper.getLineCapacity(vehiclesForLine)
     res.vehiclePositions = lineStatsHelper.getAggregatedVehLocs(lineId)
     res.stationInfos = stationsHelper.getStationInfo(lineId, stationsLocCache)
-    res.vehicleCount = lineStatsHelper.getVehicleCount(lineId)
+    res.vehicleCount = lineStatsHelper.getVehicleCount(vehiclesForLine)
 
     lineStatsHelper.calcDistanceAndSpeeds(res)
     lineStatsHelper.fillPassengerInfo(res, lineId, noOfStops, lineFreq)
     return res
+end
+
+--- Gets the stats for all Cargo lines
+---@return [table] --array of line stats
+function lineStatsHelper.getCargoStatsForAllLines()
+    local lines = lineStatsHelper.getAllCargoLines()
+    local res = {}
+    local stationsCache = {}
+
+    for _, lineId in pairs(lines) do
+       local success, returnedData = xpcall(function()
+            return lineStatsHelper.getCargoStatsForLine(lineId, stationsCache)
+        end, function()
+            print('Line Id: ' .. tostring(lineId) .. " failed")
+        end)
+
+        if success == true and returnedData then
+            table.insert(res, returnedData)
+        end
+    end
+    return res
+end
+
+---@param lineId number | string
+---@return table |nil -- {lineId,lineName,noOfStops,vehicleTypeStr,lineFreq,lineFreqStr,stationLegTimes,lineCapacity,
+--vehiclePositions,stationInfos,lineDemand,waitingCount,inVehCount,peopleAtStop,
+--peopleAtStopLongWait,stopAvgWaitTimes,legDemand }
+function lineStatsHelper.getCargoStatsForLine(lineId, stationsLocCache)
+    if type(lineId) == "string" then line = tonumber(lineId) end
+    if not(type(lineId) == "number") then return nil end
+
+    if not stationsLocCache then
+        stationsLocCache = {}
+    end
+
+    local lineComp = gameApiUtils.getLineComponent(lineId)
+    if not lineComp then
+        print("lineStatsHelper.getCargoStatsForLine: Invalid lineId: " .. tostring(lineId))
+        return nil
+    end
+
+    local lineEntity = game.interface.getEntity(lineId)
+    if not lineEntity then
+        print("lineStatsHelper.getCargoStatsForLine: Invalid entity for lineId: " .. tostring(lineId))
+        return nil
+    end
+
+    local noOfStops = #lineComp.stops
+    local vehiclesForLine = vehiclesHelper.getVehicleIds(lineId)
+    local lineFreq = lineStatsHelper.getLineFreq(lineEntity)
+
+    local res = {}
+    res.lineId = lineId
+    res.lineName = lineEntity.name
+    res.noOfStops = noOfStops
+    res.vehicleTypeStr = lineStatsHelper.getLineTypeStr(vehiclesForLine)
+    res.lineFreq = lineFreq
+    res.lineFreqStr = luaUtils.getTimeStr(lineFreq)
+    res.stationLegTimes = journeyHelper.getLegTimesFromLineComp(lineComp, vehiclesForLine)
+    res.lineCapacity = lineStatsHelper.getLineCapacity(vehiclesForLine)
+    res.vehiclePositions = lineStatsHelper.getAggregatedVehLocs(lineId)
+    res.stationInfos = stationsHelper.getStationInfo(lineId, stationsLocCache)
+    res.vehicleCount = lineStatsHelper.getVehicleCount(vehiclesForLine)
+
+    lineStatsHelper.calcDistanceAndSpeeds(res)
+    lineStatsHelper.fillCargoInfo(res, lineId, noOfStops, lineFreq)
+    return res
+end
+
+
+
+
+-------------------------------------------------------------
+---------------------- Functions -----------------
+-------------------------------------------------------------
+
+---Gets line frequency in seconds
+---@param lineEntity table
+---@return number
+function lineStatsHelper.getLineFreq(lineEntity)
+    if lineEntity.frequency then
+        return luaUtils.safeDivide(1, lineEntity.frequency)
+    end
+    return 0
 end
 
 function lineStatsHelper.calcDistanceAndSpeeds(res)
@@ -205,7 +286,7 @@ function lineStatsHelper.getVehicleLocations(lineId)
     if not(type(lineId) == "number") then return {} end
 
     if gameApiUtils.entityExists(lineId) then
-        local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
+        local vehiclesForLine = vehiclesHelper.getVehicleIds(lineId)
         local lastStopOnLineIdx = #stationsHelper.getAllStations(lineId)
         local res = {}
 
@@ -237,7 +318,7 @@ function lineStatsHelper.getVehicleLocations(lineId)
     end
 end
 
----Based off timetableHelper.getAllLines
+--- Gets all passenger lines ids
 ---@return table -- array [id : number]
 function lineStatsHelper.getAllPassengerLines()
     local res = {}
@@ -254,14 +335,27 @@ function lineStatsHelper.getAllPassengerLines()
     return res
 end
 
----@param lineId number | string
----@return number
--- returns Line capacity
-function lineStatsHelper.getLineCapacity(lineId)
-    if type(lineId) == "string" then lineId = tonumber(lineId) end
-    if not(type(lineId) == "number") then return 0 end
+--- Gets all cargo lines ids
+---@return table -- array [id : number]
+function lineStatsHelper.getAllCargoLines()
+    local res = {}
+    local lines = api.engine.system.lineSystem.getLinesForPlayer(api.engine.util.getPlayer())
 
-    local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
+    for _,lineId in pairs(lines) do
+        local isCargo = lineStatsHelper.isCargoLine(lineId)
+        if isCargo == true then
+            table.insert(res, lineId)
+        end
+    end
+
+    -- print("Found " .. #res .. " cargo lines")
+    return res
+end
+
+--- returns Line capacity
+---@param vehiclesForLine table
+---@return number
+function lineStatsHelper.getLineCapacity(vehiclesForLine)
     local totalCapcity = 0
     for _, vehicleId in pairs(vehiclesForLine) do
         local capacity = vehiclesHelper.getVehicleCapacity(vehicleId)
@@ -270,27 +364,10 @@ function lineStatsHelper.getLineCapacity(lineId)
     return totalCapcity
 end
 
----returns api.type.enum.Carrier
----@param lineId number | string
----@return number --api.type.enum.Carrier
-function lineStatsHelper.getLineTypeEnum(lineId)
-    if type(lineId) == "string" then lineId = tonumber(lineId) end
-    if not(type(lineId) == "number") then return 0 end
 
-    local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
-    if vehiclesForLine and vehiclesForLine[1] then
-        return vehiclesHelper.getVehicleType(vehiclesForLine[1])
-    end
-    return 0
-end
-
----@param lineId number | string
+---@param vehiclesForLine table
 ---@return number
-function lineStatsHelper.getVehicleCount(lineId)
-    if type(lineId) == "string" then lineId = tonumber(lineId) end
-    if not(type(lineId) == "number") then return 0 end
-
-    local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
+function lineStatsHelper.getVehicleCount(vehiclesForLine)
     if vehiclesForLine then
         return #vehiclesForLine
     end
@@ -298,11 +375,11 @@ function lineStatsHelper.getVehicleCount(lineId)
 end
 
 ---Gets line type as a string 
----@param lineId number | string
+---@param vehiclesForLine table
 ---@return string -- one of "RAIL", "ROAD", "TRAM", "WATER", "AIR"
-function lineStatsHelper.getLineTypeStr(lineId)
+function lineStatsHelper.getLineTypeStr(vehiclesForLine)
     local lineTypes = {"RAIL", "ROAD", "TRAM", "WATER", "AIR"}
-    local lineTypeEnum = lineStatsHelper.getLineTypeEnum(lineId)
+    local lineTypeEnum = lineStatsHelper.getLineTypeEnum(vehiclesForLine)
 
 	for _,currentLineType in pairs(lineTypes) do
 		if api.type.enum.Carrier[currentLineType] == lineTypeEnum then
@@ -314,7 +391,17 @@ function lineStatsHelper.getLineTypeStr(lineId)
     return "ROAD"
 end
 
----Gets if a line is a passenger line 
+---returns api.type.enum.Carrier
+---@param vehiclesForLine table
+---@return number --api.type.enum.Carrier
+function lineStatsHelper.getLineTypeEnum(vehiclesForLine)
+    if vehiclesForLine and vehiclesForLine[1] then
+        return vehiclesHelper.getVehicleType(vehiclesForLine[1])
+    end
+    return 0
+end
+
+---Gets if a line is a passenger line. Some lines can be both passenger and cargo
 ---@param lineId number | string
 ---@return boolean
 function lineStatsHelper.isPassengerLine(lineId)
@@ -333,7 +420,7 @@ function lineStatsHelper.isPassengerLine(lineId)
 
     -- Try using vehicles
     -- local start_time2 = os.clock()
-    local vehiclesForLine = vehiclesHelper.getVehicles(lineId)
+    local vehiclesForLine = vehiclesHelper.getVehicleIds(lineId)
     if vehiclesForLine and vehiclesForLine[1] then
         local vehicleId = vehiclesForLine[1]
 
@@ -346,6 +433,50 @@ function lineStatsHelper.isPassengerLine(lineId)
         return passengers > 0
     end
     -- print(string.format("lineStatsHelper.isPassengerLine, Veh, Elapsed time: %.5f", os.clock() - start_time2))
+
+    return false
+end
+
+---Gets if a line is a cargo line. Some lines can be both passenger and cargo
+---@param lineId number | string
+---@return boolean
+function lineStatsHelper.isCargoLine(lineId)
+    if type(lineId) == "string" then lineId = tonumber(lineId) end
+    if not(type(lineId) == "number") then return false end
+
+    -- Short cut
+    -- local start_time = os.clock()
+    local lineEntity = game.interface.getEntity(lineId)
+    if lineEntity and lineEntity.itemsTransported and lineEntity.itemsTransported["PASSENGERS"] then
+        if lineEntity.itemsTransported["PASSENGERS"] == 0 then
+            -- print(string.format("lineStatsHelper.isCargoLine, Entity, Elapsed time: %.5f", os.clock() - start_time))
+            return true
+        end
+
+        if lineEntity.itemsTransported._sum and lineEntity.itemsTransported._sum > lineEntity.itemsTransported["PASSENGERS"] then
+            return true
+        end
+    end
+
+    -- Try using first vehicle. Should really check all vehicles but this is faster...
+    -- local start_time2 = os.clock()
+    local vehiclesForLine = vehiclesHelper.getVehicleIds(lineId)
+    if vehiclesForLine and vehiclesForLine[1] then
+        local vehicleId = vehiclesForLine[1]
+
+        local vehicle = gameApiUtils.getVehicleComponent(vehicleId)
+        if not vehicle or not vehicle.config or not vehicle.config.capacities then
+            return false
+        end
+
+        for idx, cap in pairs(vehicle.config.capacities) do
+            -- 1 = PASSENGERS
+            if idx ~= 1 and cap > 0 then
+                return true
+            end
+        end
+    end
+    -- print(string.format("lineStatsHelper.isCargoLine, Veh, Elapsed time: %.5f", os.clock() - start_time2))
 
     return false
 end
@@ -418,10 +549,62 @@ function lineStatsHelper.recordSimJourney(simEntity, legCounts, noOfStations)
 end
 
 -------------------------------------------------------------
----------------------- Issues Locating Functions ------------
+---------------------- Cargo Functions -----------------
 -------------------------------------------------------------
+function lineStatsHelper.fillCargoInfo(res, lineId, noOfStops, lineFreq)
+    local gameTime = gameApiUtils.getTime()
+    local cargoForLineArr = api.engine.system.simCargoSystem.getSimCargosForLine(lineId)
+    res.lineDemand = 0
+    res.waitingCount = 0
+    res.longWaitCount = 0
+    res.inVehCount = 0
+    res.cargoAtStop = luaUtils.createOneBasedArray(noOfStops, 0)
+    res.cargoAtStopLongWait = luaUtils.createOneBasedArray(noOfStops, 0)
+    res.legDemand = luaUtils.createOneBasedArray(noOfStops, 0)
 
--- Stop with more people than train capacity (divide line capacity/no of vehicles)
--- 2x more people waiting than loaded
+    -- copied from passenger version
+    for _, personId in pairs(cargoForLineArr) do 
+        local simEntityAtTerminal = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
+        local simEntityAtVeh = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_VEHICLE)
+
+        -- Waiting at terminal
+        if simEntityAtTerminal then 
+            if simEntityAtTerminal.line == lineId then
+                local stopNo = simEntityAtTerminal.lineStop0 + 1
+
+                res.lineDemand = res.lineDemand + 1
+                res.waitingCount  = res.waitingCount + 1
+                res.cargoAtStop[stopNo] = res.cargoAtStop[stopNo] + 1
+                local waitTime = gameTime - luaUtils.getTimeInSecs(simEntityAtTerminal.arrivalTime)
+
+                if lineFreq > 60  and waitTime > lineFreq + 60 then
+                    res.longWaitCount = res.longWaitCount + 1
+                    res.cargoAtStopLongWait[stopNo] =  res.cargoAtStopLongWait[stopNo] + 1
+                elseif lineFreq < 60 and waitTime > 5 * 60 then
+                    -- Default to 5 min if no line frequency
+                    res.longWaitCount = res.longWaitCount + 1
+                    res.cargoAtStopLongWait[stopNo] =  res.cargoAtStopLongWait[stopNo] + 1
+                end
+                lineStatsHelper.recordSimJourney(simEntityAtTerminal, res.legDemand, noOfStops)
+
+            end
+        end
+        -- On Vehicle
+        if simEntityAtVeh then
+            if simEntityAtVeh.line == lineId then
+                res.lineDemand = res.lineDemand + 1
+                res.inVehCount = res.inVehCount + 1
+                lineStatsHelper.recordSimJourney(simEntityAtVeh, res.legDemand, noOfStops)
+            end
+        end
+    end
+
+    res.maxAtStop = luaUtils.maximumArray(res.cargoAtStop)
+    res.demandCapRatio = luaUtils.safeDivide(res.lineDemand, res.lineCapacity)
+
+    return res
+end
+
+
 
 return lineStatsHelper

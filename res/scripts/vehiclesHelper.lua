@@ -78,13 +78,12 @@ function vehiclesHelper.getVehicleCapacity(vehicleId)
         totalCapcity = totalCapcity + cap
     end
     return totalCapcity
-
 end
 
 ---@param vehicleId number | string
 ---@param vehicle2cargoMap table
--- returns string with vehicle passenger count / total
-function vehiclesHelper.getVehiclePassengerCountStr(vehicleId, vehicle2cargoMap) 
+-- returns string with vehicle cargo count / total
+function vehiclesHelper.getVehicleCargoCountStr(vehicleId, vehicle2cargoMap)
     if type(vehicleId) == "string" then vehicleId = tonumber(vehicleId) end
     if not(type(vehicleId) == "number") then return false end
 
@@ -124,8 +123,8 @@ function vehiclesHelper.getLineNameOfVehicle(vehicleId)
 end
 
 ---@param lineId number | string
--- returns [vehicleId] arr - vehicles for line 
-function vehiclesHelper.getVehicles(lineId)
+-- returns [vehicleId] arr - vehicle ids for line 
+function vehiclesHelper.getVehicleIds(lineId)
     if type(lineId) == "string" then lineId = tonumber(lineId) end
     if not(type(lineId) == "number") then return {} end
 

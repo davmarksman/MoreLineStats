@@ -65,7 +65,7 @@ end
 ---Resets all trains on a line
 ---@param lineId any
 function lostTrainsHelper.resetAllTrainsOnLine(lineId)
-  local vehicleIds = vehiclesHelper.getVehicles(lineId)
+  local vehicleIds = vehiclesHelper.getVehicleIds(lineId)
   lostTrainsHelper.resetTrains(vehicleIds)
 end
 

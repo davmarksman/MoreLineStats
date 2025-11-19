@@ -1,7 +1,9 @@
 local lineGui = require "lineGui"
-local linesListGui = require "linesListGui"
+local cargoLineGui = require "cargoLineGui"
+local linesMainGui = require "linesMainGui"
 local lostTrainsHelper = require "lostTrainsHelper"
 local lineStatsHelper = require "lineStatsHelper"
+local uiUtil = require "uiUtil"
 
 
 function data()
@@ -16,12 +18,22 @@ function data()
                 else
                     -- Line
                     if api.engine.getComponent(entId, api.type.ComponentType.LINE) then
-                        local isPassenger = lineStatsHelper.isPassengerLine(entId)
-
-                        if isPassenger == true then
-                            local stWindow = api.gui.util.downcast(api.gui.util.getById(id))
-                            if stWindow then
-                                local lineBtn = lineGui.createLineButton(entId, "More Line Statistics")
+                        local stWindow = api.gui.util.downcast(api.gui.util.getById(id))
+                        print("stWindow")
+                        if stWindow then
+                            -- A line may be both passenger and cargo
+                            local isPassenger = lineStatsHelper.isPassengerLine(entId)
+                            local isCargo = lineStatsHelper.isCargoLine(entId)
+                            if isPassenger == true and isCargo == true then
+                                local passengerBtn = lineGui.createLineButton(entId, "More Passenger Statistics")
+                                local cargoBtn = cargoLineGui.createCargoLineButton(entId, "More Cargo Statistics")
+                                local btnComp = uiUtil.makeHorizontal(passengerBtn, cargoBtn)
+                                stWindow:getContent():addItem(btnComp,0,0)
+                            elseif isPassenger == true  then
+                                local passengerBtn = lineGui.createLineButton(entId, "More Passenger Statistics")
+                                stWindow:getContent():addItem(passengerBtn,0,0)
+                            elseif isCargo == true then
+                                local lineBtn = cargoLineGui.createCargoLineButton(entId, "More Cargo Statistics")
                                 stWindow:getContent():addItem(lineBtn,0,0)
                             end
                         end
@@ -36,7 +48,7 @@ function data()
             local buttonLabel = gui.textView_create("gameInfo.lineInfo.label", "More Line Statistics")
             local button = gui.button_create("gameInfo.lineInfo.button", buttonLabel)
             button:onClick(function ()
-                local success, err = pcall(linesListGui.showLineList)
+                local success, err = pcall(linesMainGui.showLineList)
                 if err then
                     print(err)
                 end
