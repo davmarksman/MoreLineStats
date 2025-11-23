@@ -16,11 +16,11 @@ function data()
 			description = _([[ 
 More Line statistics!
 
-This lightweight mod provides more statistic information about passenger lines and detects lost trains. The motivation was to make managing having multiple passenger lines between the same stations easier.
+This lightweight mod provides more statistic information about lines and detects lost trains. The motivation was to make managing running multiple passenger lines between the same stations easier
 
 CORE FEATURES
 - Find lost trains!
-- Statistics about passenger lines
+- Statistics about passenger and cargo lines
 - Easy access from Line Window
 
 
@@ -32,11 +32,11 @@ LOST TRAINS
 LINES
 This shows show additional stats about lines. This can be accessed from a line's window (more info button), or from the game bar. Only useful for passenger lines:
 - Overview of all lines
-- How many passengers are waiting at a stop
-- How many passengers have been waiting for longer than the line frequency (Aka there was not enough space on the last vehicle for them)
-- Passengers travelling on the line
-- Passengers waiting
-- Line Capcity
+- How many passengers/cargo are waiting at a stop
+- How many passengers/cargo have been waiting for longer than the line frequency (Aka there was not enough space on the last vehicle for them)
+- Passengers/cargo travelling on the line
+- Passengers/cargo waiting
+- Line Capacity
 - Line & Sections demand (Similar to the Destinations data layer)
 - Leg times between stops
 - Distance between stops (This is as the crow flies - the most direct path between 2 stops)
@@ -50,9 +50,9 @@ OTHER
 PERFORMANCE
 The mod is designed to be performant:
 - No background running tasks
-- The most expensive operation is calculating the stats about all passenger lines. This is calculated whenever then the line menu is opened from the game bar. That said you can bypass this and access a line from the line's window which is faster:
+- The most expensive operation is calculating the stats about all passenger or cargo lines. This is calculated whenever then the line menu is opened from the game bar. That said you can bypass this and access a line from the line's window which is faster:
 - Accessing a line from the lines window only calculates stats for that line so it's pretty fast
-- The stats are not live updating (apart from the vehicle locations which updates every apx 3-5 seconds). You can refresh stats at will using the "Reload" button
+- The stats are not live updating (apart from the vehicle locations which updates every apx 3-5 seconds). You can refresh the stats at will using the "Reload" button
 
 CREDITS
 - The ui and some helper functions are based off Celmi's Timetables mod
@@ -63,6 +63,9 @@ REPO
 https://github.com/davmarksman/MoreLineStats
 
 ---
+UPDATE 1.5
+- Support for cargo lines
+
 UPDATE 1.4
 - Tooltips!
 - Improved sorting for line list columns
@@ -88,7 +91,6 @@ UPDATE 1.1
 - Change from "How many passengers arrived within the last 5 minutes" to "Passengers waiting longer than Line frequency"
 - Added a list of Vehicles on the line
 - QOL, UX and usability fixes
- 
 
 ]]),
 		},

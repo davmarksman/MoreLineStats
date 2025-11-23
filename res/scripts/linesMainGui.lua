@@ -256,37 +256,37 @@ function linesMainGui.createPassengerTableHeader(lineFilter)
         lineHeaderTable:setColWidth(i-1,width)
     end
 
-    local nameBtn =  uiUtil.createButtonToolTip("Line", "Line Name. Click to sort")
+    local nameBtn =  uiUtil.createButtonToolTip("Line", "Line Name.\nClick to sort")
     nameBtn:onClick(linesMainGui.sortByNameAlpha)
 
-    local demandBtn =  uiUtil.createButtonToolTip("Demand", "Total passengers on line (in vehicles + waiting). Click to sort")
+    local demandBtn =  uiUtil.createButtonToolTip("Demand", "Total passengers on line (in vehicles + waiting).\nClick to sort")
     demandBtn:onClick(linesMainGui.sortByDemand)
 
-    local demandCapBtn =  uiUtil.createButtonToolTip("Demand %", "Demand/Capacity: Demand as a percentage of line capacity. Numbers below 100% indicate less demand than line capacity. Click to sort")
+    local demandCapBtn =  uiUtil.createButtonToolTip("Demand %", "Demand as a percentage of line capacity.\nNumbers below 100% indicate less demand than line capacity.\nClick to sort")
     demandCapBtn:onClick(linesMainGui.sortByDemandCap)
 
-    local loadBtn = uiUtil.createButtonToolTip("Passengers", "Passengers in vehicles (Loaded) / line capacity. Same as on the line statistics windov. Click to sort by passengers in vehicles (loaded)")
+    local loadBtn = uiUtil.createButtonToolTip("Passengers", "Passengers in vehicles (Loaded) / Line capacity.\nSame as on the line statistics window.\nClick to sort by passengers in vehicles (loaded)")
     loadBtn:onClick(linesMainGui.sortByLoad)
 
-    local waitingBtn =  uiUtil.createButtonToolTip("Waiting", "Passengers currently waiting at stops. Click to sort")
+    local waitingBtn =  uiUtil.createButtonToolTip("Waiting", "Passengers currently waiting at stops.\nClick to sort")
     waitingBtn:onClick( linesMainGui.sortByWaiting)
 
-    local maxStnBtn =  uiUtil.createButtonToolTip("Busiest", "Number of passengers at the busiest stop. Click to sort")
+    local maxStnBtn =  uiUtil.createButtonToolTip("Busiest", "Number of passengers at the busiest stop.\nClick to sort")
     maxStnBtn:onClick( linesMainGui.sortByMaxAtStop)
 
-    local longWaitBtn =  uiUtil.createButtonToolTip("Missed", "How many passengers have been waiting for longer than the line frequency (Aka there was not enough space on the last vehicle for them). Click to sort")
+    local longWaitBtn =  uiUtil.createButtonToolTip("Missed", "How many passengers have been waiting for longer than the line frequency.\nClick to sort")
     longWaitBtn:onClick( linesMainGui.sortByLongWait)
 
-    local avgSpdBtn =  uiUtil.createButtonToolTip("Avg Speed", "Average line speed between stops (as the crow flies). Click to sort")
+    local avgSpdBtn =  uiUtil.createButtonToolTip("Avg Speed", "Average line speed between stops (as the crow flies).\nClick to sort")
     avgSpdBtn:onClick( linesMainGui.sortBySpd)
 
-    local journeyBtn =  uiUtil.createButtonToolTip("Journey", "Total journey time for the line (sum of leg times between stops). Click to sort")
+    local journeyBtn =  uiUtil.createButtonToolTip("Journey", "Total journey time for the line (sum of leg times between stops).\nClick to sort")
     journeyBtn:onClick( linesMainGui.sortByJourney)
 
-    local distBtn =  uiUtil.createButtonToolTip("Length", "Total distance between the stops of the line (as the crow flies between each stop). Click to sort")
+    local distBtn =  uiUtil.createButtonToolTip("Length", "Total distance between the stops of the line (as the crow flies between each stop).\nClick to sort")
     distBtn:onClick( linesMainGui.sortByDistance)
 
-    local freqBtn =  uiUtil.createButtonToolTip("Freq.", "Indicates the time between two vehicles of that line in real time at normal game speed (Same as shown in line window). Click to sort")
+    local freqBtn =  uiUtil.createButtonToolTip("Freq.", "Indicates the time between two vehicles of that line in real time at normal game speed\nSame as shown in line window.\nClick to sort")
     freqBtn:onClick( linesMainGui.sortByFreq)
 
     local refreshDataBtn = uiUtil.createButtonToolTip("Reload", "Refresh the data shown in the table")
@@ -376,37 +376,37 @@ function linesMainGui.createCargoTableHeader(lineFilter)
         lineHeaderTable:setColWidth(i-1,width)
     end
 
-    local nameBtn =  uiUtil.createButtonToolTip("Line", "Line Name. Click to sort")
+    local nameBtn =  uiUtil.createButtonToolTip("Line", "Line Name.\nClick to sort")
     nameBtn:onClick(linesMainGui.sortByNameAlpha)
 
-    local demandBtn =  uiUtil.createButtonToolTip("Demand", "Total cargo on line (in vehicles + waiting). Click to sort")
+    local demandBtn =  uiUtil.createButtonToolTip("Demand", "Total cargo on line (in vehicles + waiting).\nClick to sort")
     demandBtn:onClick(linesMainGui.sortByDemand)
 
-    local demandCapBtn =  uiUtil.createButtonToolTip("Demand %", "Demand/Capacity: Demand as a percentage of line capacity. Numbers below 100% indicate less demand than line capacity. Click to sort")
+    local demandCapBtn =  uiUtil.createButtonToolTip("Demand %", "Demand as a percentage of line capacity.\nNumbers below 100% indicate less demand than line capacity.\nClick to sort")
     demandCapBtn:onClick(linesMainGui.sortByDemandCap)
 
-    local loadBtn = uiUtil.createButtonToolTip("Cargo", "cargo in vehicles (Loaded) / line capacity. Same as on the line statistics windov. Click to sort by cargo in vehicles (loaded)")
+    local loadBtn = uiUtil.createButtonToolTip("Cargo", "Cargo in vehicles (Loaded) / Line capacity.\nSame as on the line statistics window.\nClick to sort by cargo in vehicles (loaded)")
     loadBtn:onClick(linesMainGui.sortByLoad)
 
-    local waitingBtn =  uiUtil.createButtonToolTip("Waiting", "cargo currently waiting at stops. Click to sort")
+    local waitingBtn =  uiUtil.createButtonToolTip("Waiting", "cargo currently waiting at stops.\nClick to sort")
     waitingBtn:onClick( linesMainGui.sortByWaiting)
 
-    local maxStnBtn =  uiUtil.createButtonToolTip("Busiest", "Number of cargo at the busiest stop. Click to sort")
+    local maxStnBtn =  uiUtil.createButtonToolTip("Busiest", "Number of cargo at the busiest stop.\nClick to sort")
     maxStnBtn:onClick( linesMainGui.sortByMaxAtStop)
 
-    local longWaitBtn =  uiUtil.createButtonToolTip("Missed", "How many cargo have been waiting for longer than the line frequency (Aka there was not enough space on the last vehicle for them). Click to sort")
+    local longWaitBtn =  uiUtil.createButtonToolTip("Missed", "How much cargo has been waiting for longer than the line frequency.\nClick to sort")
     longWaitBtn:onClick( linesMainGui.sortByLongWait)
 
-    local avgSpdBtn =  uiUtil.createButtonToolTip("Avg Speed", "Average line speed between stops (as the crow flies). Click to sort")
+    local avgSpdBtn =  uiUtil.createButtonToolTip("Avg Speed", "Average line speed between stops (as the crow flies).\nClick to sort")
     avgSpdBtn:onClick( linesMainGui.sortBySpd)
 
-    local journeyBtn =  uiUtil.createButtonToolTip("Journey", "Total journey time for the line (sum of leg times between stops). Click to sort")
+    local journeyBtn =  uiUtil.createButtonToolTip("Journey", "Total journey time for the line (sum of leg times between stops).\nClick to sort")
     journeyBtn:onClick( linesMainGui.sortByJourney)
 
-    local distBtn =  uiUtil.createButtonToolTip("Length", "Total distance between the stops of the line (as the crow flies between each stop). Click to sort")
+    local distBtn =  uiUtil.createButtonToolTip("Length", "Total distance between the stops of the line (as the crow flies between each stop).\nClick to sort")
     distBtn:onClick( linesMainGui.sortByDistance)
 
-    local freqBtn =  uiUtil.createButtonToolTip("Freq.", "Indicates the time between two vehicles of that line in real time at normal game speed (Same as shown in line window). Click to sort")
+    local freqBtn =  uiUtil.createButtonToolTip("Freq.", "Indicates the time between two vehicles of that line in real time at normal game speed.\nSame as shown in line window).\nClick to sort")
     freqBtn:onClick( linesMainGui.sortByFreq)
 
     local refreshDataBtn = uiUtil.createButtonToolTip("Reload", "Refresh the data shown in the table")

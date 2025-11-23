@@ -80,7 +80,7 @@ function cargoLineGui.createGui(lineId)
         vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
 
         local lineName = gameApiUtils.getEntityName(lineId)
-        local lineWindow =  uiUtil.createWindow("Line Details: " .. lineName, lineFloatLayout, 890, 650, false)
+        local lineWindow =  uiUtil.createWindow("Cargo Details: " .. lineName, lineFloatLayout, 890, 650, false)
         lineWindow:setId("lineInfo.cargoLineUi.lineWindow."  .. lineIdStr)
         lineWindow:setPosition(200,400)
 
