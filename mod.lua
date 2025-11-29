@@ -44,8 +44,6 @@ This shows show additional stats about lines. This can be accessed from a line's
 - Competing lines (speed is the biggest deciding factor for which lines passengers pick. This allows you to see lines competing for the same destinations and the time difference between them)
 - Vehicles on line and where they are currently located
 
-OTHER
-- This mod doesn't show any stats about cargo
 
 PERFORMANCE
 The mod is designed to be performant:
@@ -67,29 +65,20 @@ UPDATE 1.5
 - Support for cargo lines
 
 UPDATE 1.4
-- Tooltips!
-- Improved sorting for line list columns
-- Demand % column showing demand as a percentage of line capacity
+- Tooltips! and improved sorting
 
 UPDATE 1.3
 - Overview of all lines
 - Open line stats from in-game line window
-- Line/Section demand
-- Line/Section speeds
-- Better lost trains functionality
-- Complete UI rewrite
+- Demand (passengers on line + waiting) & Average speeds
 
 
 UPDATE 1.2
-- Ability to reset trains in view & reset lost trains
-- Vehicles on line section now shows the number of passengers on each vehicle
-- New icons
-- Show cargo (passengers loaded/line capacity) and demand (all passengers currently on the line)
-- Update competing lines to show competing lines for each stop from the currently selected stop
+- Reset trains in view & reset lost trains
+- Show cargo (passengers loaded/line capacity)
+- Updated competing lines
 
 UPDATE 1.1
-- Change from "How many passengers arrived within the last 5 minutes" to "Passengers waiting longer than Line frequency"
-- Added a list of Vehicles on the line
 - QOL, UX and usability fixes
 
 ]]),
