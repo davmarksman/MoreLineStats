@@ -3,6 +3,7 @@ local lostTrainsHelper = require "lostTrainsHelper"
 local vehiclesHelper = require "vehiclesHelper"
 local uiUtil = require "uiUtil"
 local lineGui = require "lineGui"
+local cargoLineGui = require "cargoLineGui"
 local luaUtils = require "luaUtils"
 
 local windowWidth = 1070
@@ -446,7 +447,7 @@ function linesMainGui.fillCargoTable()
         local shortenedLineName = luaUtils.shortenName(lineStats.lineName, 35)
 
         -- Ui Elements
-        local lineBtn = lineGui.createLineButton(lineId, shortenedLineName)
+        local lineBtn = cargoLineGui.createCargoLineButton(lineId, shortenedLineName)
         local lblDemand = api.gui.comp.TextView.new(tostring( lineStats.lineDemand))
         local lblDemandCap = api.gui.comp.TextView.new(string.format("%.d %%", lineStats.demandCapRatio * 100))
         local lblLoadCap = api.gui.comp.TextView.new(lineStats.inVehCount .. "/" .. lineStats.lineCapacity)
