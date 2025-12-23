@@ -63,7 +63,7 @@ function linesMainGui.initTab(tabSelected)
         -- Lost Trains Tab
         linesMainGui.fillLostLines()
     else
-        print("Doing nothing )
+        print("Doing nothing")
     end
 end
 
