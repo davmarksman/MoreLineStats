@@ -11,6 +11,7 @@ local colWidths = {260,75,90,95,80,80,75,95,75,70,65}
 local PASSENGER_TAB = 0
 local CARGO_TAB = 1
 local LOST_TAB = 2
+local LOADED_DO_NOTHING = 5
 
 local linesMainGui = {}
 local uiElems = {
@@ -37,30 +38,32 @@ local uiState = {
     lastSelectedFilter = "ALL", -- Default filter
     allLinesCache = {}, -- Cache for all lines (of cargo or passenger). Array,
     sortDesc = false, -- Sort order
-    isCargoList = false, -- uiElems.tabWidget:getTab() throws if called before ui created. we use this instead as it's safe
+    lastTab = PASSENGER_TAB, -- last selected tab index
 }
 
 
 function linesMainGui.showLineList()
+    print("-- showLineList --")
     linesMainGui.showOrCreateUi()
-    local tabSelected = uiElems.tabWidget:getTab()
-    print("Tab selected: ", tabSelected)
-    linesMainGui.initTab(tabSelected)
+    linesMainGui.initTab(uiState.lastTab)
 end
 
 function linesMainGui.initTab(tabSelected)
     -- 0 is first tab
     if tabSelected == PASSENGER_TAB then
-        uiState.isCargoList = false
+        uiState.lastTab = PASSENGER_TAB
         linesMainGui.fillPassengerTable()
         linesMainGui.filterToLinesOfType(uiState.lastSelectedFilter, uiElems.passengerToggleBtns)
     elseif tabSelected == CARGO_TAB then
-        uiState.isCargoList = true
+        uiState.lastTab = CARGO_TAB
         linesMainGui.fillCargoTable()
         linesMainGui.filterToLinesOfType(uiState.lastSelectedFilter, uiElems.cargoToggleBtns)
-    else
+    elseif tabSelected == LOST_TAB then
+        uiState.lastTab = LOST_TAB
         -- Lost Trains Tab
         linesMainGui.fillLostLines()
+    else
+        print("Doing nothing )
     end
 end
 
@@ -105,6 +108,7 @@ function linesMainGui.showOrCreateUi()
 
     -- create final window
     uiElems.window = uiUtil.createWindow("More Line Statistics", uiElems.tabWidget, windowWidth, 650, true)
+    uiState.lastTab = LOADED_DO_NOTHING
 end
 
 --- ----------------------------------------------------
@@ -204,7 +208,7 @@ function linesMainGui.filterToLinesOfType(typeOfLine, toggleButtons)
     uiState.lastSelectedFilter = typeOfLine
 
     local tableItems = uiElems.passengerTableItems
-    if uiState.isCargoList == true then
+    if uiState.lastTab == CARGO_TAB then
         tableItems = uiElems.cargoTableItems
     end
 
@@ -560,7 +564,7 @@ end
 function linesMainGui.sortLines(sortFn)
     local order = luaUtils.getOrderOfArray(uiState.allLinesCache, sortFn)
 
-    if uiState.isCargoList == true then
+    if uiState.lastTab == CARGO_TAB then
         uiElems.cargoTable:setOrder(order)
     else
         uiElems.passengerTable:setOrder(order)
