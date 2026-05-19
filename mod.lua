@@ -43,6 +43,7 @@ This shows show additional stats about lines. This can be accessed from a line's
 - Average speeds (This is as the crow flies - the most direct path between 2 stops)
 - Competing lines (speed is the biggest deciding factor for which lines passengers pick. This allows you to see lines competing for the same destinations and the time difference between them)
 - Vehicles on line and where they are currently located
+- This mod supports mixed passenger/cargo train lines
 
 
 PERFORMANCE

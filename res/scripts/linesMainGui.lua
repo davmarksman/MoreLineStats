@@ -267,7 +267,7 @@ function linesMainGui.createPassengerTableHeader(lineFilter)
     local demandBtn =  uiUtil.createButtonToolTip("Demand", "Total passengers on line (in vehicles + waiting).\nClick to sort")
     demandBtn:onClick(linesMainGui.sortByDemand)
 
-    local demandCapBtn =  uiUtil.createButtonToolTip("Demand %", "Demand as a percentage of line capacity.\nNumbers below 100% indicate less demand than line capacity.\nClick to sort")
+    local demandCapBtn =  uiUtil.createButtonToolTip("Demand %", "Demand as a percentage of line capacity.\nHigher numbers indicate there may not be enough vehicles on the line.\nClick to sort")
     demandCapBtn:onClick(linesMainGui.sortByDemandCap)
 
     local loadBtn = uiUtil.createButtonToolTip("Passengers", "Passengers in vehicles (Loaded) / Line capacity.\nSame as on the line statistics window.\nClick to sort by passengers in vehicles (loaded)")
@@ -334,7 +334,7 @@ function linesMainGui.fillPassengerTable()
         -- Ui Elements
         local lineBtn = lineGui.createLineButton(lineId, shortenedLineName)
         local lblDemand = api.gui.comp.TextView.new(tostring( lineStats.lineDemand))
-        local lblDemandCap = api.gui.comp.TextView.new(string.format("%.d %%", lineStats.demandCapRatio * 100))
+        local lblDemandCap = api.gui.comp.TextView.new(string.format("%.d%%", lineStats.demandCapRatio * 100))
         local lblLoadCap = api.gui.comp.TextView.new(lineStats.inVehCount .. "/" .. lineStats.lineCapacity)
         local compWaiting = uiUtil.makeIconText(tostring(lineStats.waitingCount), "ui/hud/cargo_passengers.tga")
 
@@ -453,7 +453,7 @@ function linesMainGui.fillCargoTable()
         -- Ui Elements
         local lineBtn = cargoLineGui.createCargoLineButton(lineId, shortenedLineName)
         local lblDemand = api.gui.comp.TextView.new(tostring( lineStats.lineDemand))
-        local lblDemandCap = api.gui.comp.TextView.new(string.format("%.d %%", lineStats.demandCapRatio * 100))
+        local lblDemandCap = api.gui.comp.TextView.new(string.format("%.d%%", lineStats.demandCapRatio * 100))
         local lblLoadCap = api.gui.comp.TextView.new(lineStats.inVehCount .. "/" .. lineStats.lineCapacity)
         local lblWaiting = api.gui.comp.TextView.new(tostring(lineStats.waitingCount))
 
