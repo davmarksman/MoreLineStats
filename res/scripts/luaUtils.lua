@@ -148,13 +148,13 @@ end
 function luaUtils.getTimeStr(time)
     if not(type(time) == "number") then return "ERROR" end
 
-    local timeStr = os.date('%M:%S', time)
     if(time == 0) then
-        timeStr = "--:--"
-    elseif time > 60 * 60 then
-        timeStr = "Long"
+        return "--:--"
     end
-    return timeStr
+
+    local mins = math.floor(time / 60)
+    local secs = time % 60
+    return string.format("%02d:%02d", mins, secs)
 end
 
 
