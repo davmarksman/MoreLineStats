@@ -189,7 +189,9 @@ function stationsHelper.getTimeBetweenStations(lineId, startStationId, endStatio
                     local legTime = stationLegTime[i]
                     if type(legTime) == "string" then legTime = tonumber(legTime) end
                     if not(type(legTime) == "number") then
-                        --print("Expected String or Number")
+                        return 0
+                    end
+                    if legTime == 0 then
                         return 0
                     end
 
@@ -213,6 +215,35 @@ function stationsHelper.getTimeBetweenStations(lineId, startStationId, endStatio
 
     return toReturnTime
 end
+
+
+-- function stationsHelper.calculateTimeBetweenStops(startIdx, endIdx, stationLegTime, noOfstations)
+--     local i = startIdx
+--     local totalTime = 0
+--     while i ~= endIdx do
+--         if (stationLegTime[i]) then
+--             local legTime = stationLegTime[i]
+--             if type(legTime) == "string" then legTime = tonumber(legTime) end
+--             if not(type(legTime) == "number") then
+--                 return 0
+--             end
+--             if legTime == 0 then
+--                 return 0
+--             end
+
+--             totalTime = totalTime + legTime
+--         else
+--             return 0
+--         end
+
+--         if i == noOfstations then
+--             i = 1
+--         else
+--             i = i + 1
+--         end
+--     end
+--     return totalTime
+-- end
 
 ---@param lineId number
 ---@param lineStopIdx number note this is 1 based as opposed to vehicle stop index that is 0 based
