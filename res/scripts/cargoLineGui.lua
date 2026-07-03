@@ -12,6 +12,7 @@ local lineWindows = {}
 local stationTables = {}
 local lineVehTables = {}
 local moreStatsTables = {}
+local cargoTypesTables = {}
 local lineImgsForLine = {}
 
 function cargoLineGui.createGui(lineId)
@@ -26,7 +27,7 @@ function cargoLineGui.createGui(lineId)
             -- Cache the list of vehicles for use later
             vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
 
-            cargoLineGui.fillLineStatistics(lineId, stationTables[lineId], moreStatsTables[lineId])
+            cargoLineGui.fillLineStatistics(lineId, stationTables[lineId], moreStatsTables[lineId], cargoTypesTables[lineId])
             lineVehTables[lineId]:deleteAll()
             lineWindows[lineId]:setVisible(true, true)
 
@@ -47,6 +48,11 @@ function cargoLineGui.createGui(lineId)
 
         local verticalLayoutTopRight = uiUtil.makeVertical(moreStatsTable, scrollAreaVeh)
         lineFloatLayout:addItem(verticalLayoutTopRight,1,0)
+
+        -- Top cargo types on the line (Bottom Right Column)
+        local cargoTypesTable = cargoLineGui.createCargoTypesTable()
+        local cargoTypesArea = cargoLineGui.createCargoTypesArea(lineIdStr, cargoTypesTable)
+        lineFloatLayout:addItem(cargoTypesArea,1,1)
 
 
         local refreshDataBtn = uiUtil.createButton("Reload Data")
@@ -78,7 +84,7 @@ function cargoLineGui.createGui(lineId)
             end
         end)
 
-        cargoLineGui.fillLineStatistics(lineId, stationTable, moreStatsTable)
+        cargoLineGui.fillLineStatistics(lineId, stationTable, moreStatsTable, cargoTypesTable)
 
         -- Cache the list of vehicles for use later
         vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
@@ -92,6 +98,7 @@ function cargoLineGui.createGui(lineId)
         stationTables[lineId] = stationTable
         lineVehTables[lineId] = lineVehTable
         moreStatsTables[lineId] = moreStatsTable
+        cargoTypesTables[lineId] = cargoTypesTable
 
         print(string.format("cargoLineGui.createGui. Elapsed time: %.4f", os.clock() - start_time))
     else
@@ -121,8 +128,8 @@ local rightWidth = 280
 --- Sets up UI Elements for the Right table
 function cargoLineGui.createVehArea(lineIdStr, lineVehTable)
     local scrollAreaVeh = api.gui.comp.ScrollArea.new(lineVehTable, "lineInfo.cargoLineUi.scrollAreaVeh" .. lineIdStr)
-    scrollAreaVeh:setMinimumSize(api.gui.util.Size.new(rightWidth, 380))
-    scrollAreaVeh:setMaximumSize(api.gui.util.Size.new(rightWidth, 380))
+    scrollAreaVeh:setMinimumSize(api.gui.util.Size.new(rightWidth, 180))
+    scrollAreaVeh:setMaximumSize(api.gui.util.Size.new(rightWidth, 180))
     return scrollAreaVeh
 end
 
@@ -133,10 +140,48 @@ function cargoLineGui.createMoreStatsTable()
     return moreStatsTable
 end
 
-function cargoLineGui.fillLineStatistics(lineId, stationTable, moreStatsTable)
+function cargoLineGui.createCargoTypesTable()
+    local cargoTypesTable = api.gui.comp.Table.new(2, 'SINGLE')
+    cargoTypesTable:setColWidth(0,60)
+    return cargoTypesTable
+end
+
+function cargoLineGui.createCargoTypesArea(lineIdStr, cargoTypesTable)
+    local scrollAreaCargoTypes = api.gui.comp.ScrollArea.new(cargoTypesTable, "lineInfo.cargoLineUi.scrollAreaCargoTypes" .. lineIdStr)
+    scrollAreaCargoTypes:setMinimumSize(api.gui.util.Size.new(rightWidth, 220))
+    scrollAreaCargoTypes:setMaximumSize(api.gui.util.Size.new(rightWidth, 220))
+    scrollAreaCargoTypes:setTooltip("Top cargo types being carried on this line (in vehicles + waiting).")
+    return scrollAreaCargoTypes
+end
+
+function cargoLineGui.fillLineStatistics(lineId, stationTable, moreStatsTable, cargoTypesTable)
     local lineStats = lineStatsHelper.getCargoStatsForLine(lineId, {})
     cargoLineGui.fillStationTable(lineId, stationTable, lineStats)
     cargoLineGui.fillMoreStatsTable(moreStatsTable, lineStats)
+    cargoLineGui.fillCargoTypesTable(cargoTypesTable, lineStats)
+end
+
+--- Displays the top 6 cargo types on the line (icon + count, name on hover)
+function cargoLineGui.fillCargoTypesTable(cargoTypesTable, lineStats)
+    cargoTypesTable:deleteAll()
+
+    if not lineStats or not lineStats.cargoTypeCounts then return end
+
+    local lblTitle = api.gui.comp.TextView.new("Cargo on Line")
+    cargoTypesTable:addRow({lblTitle, api.gui.comp.TextView.new("")})
+
+    local topCargoTypes = lineStatsHelper.getTopCargoTypesForLine(lineStats.cargoTypeCounts, 5)
+    for _, entry in pairs(topCargoTypes) do
+        local display = lineStatsHelper.getCargoTypeDisplay(entry.cargoType)
+
+        local imgIcon = api.gui.comp.ImageView.new(display.icon)
+        imgIcon:setTooltip(display.name)
+
+        local lblCount = api.gui.comp.TextView.new(tostring(entry.count))
+        lblCount:setTooltip(display.name)
+
+        cargoTypesTable:addRow({imgIcon, lblCount})
+    end
 end
 
 function cargoLineGui.fillMoreStatsTable(moreStatsTable, lineStats)
@@ -152,7 +197,7 @@ function cargoLineGui.fillMoreStatsTable(moreStatsTable, lineStats)
     lblLoadCap:setTooltip("Cargo in vehicles (Loaded) / Line capacity.")
     moreStatsTable:addRow({api.gui.comp.TextView.new("Cargo"), lblLoadCap})
 
-    local compWaiting = uiUtil.makeIconText(tostring(lineStats.waitingCount), "ui/hud/cargo_goods.tga")
+    local compWaiting = uiUtil.makeIconText(tostring(lineStats.waitingCount), "ui/cargo_dest.tga")
     compWaiting:setTooltip(_("Cargo waiting"))
     moreStatsTable:addRow({api.gui.comp.TextView.new("Waiting"), compWaiting})
 

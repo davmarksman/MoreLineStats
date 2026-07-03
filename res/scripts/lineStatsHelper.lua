@@ -561,20 +561,22 @@ function lineStatsHelper.fillCargoInfo(res, lineId, noOfStops, lineFreq)
     res.cargoAtStop = luaUtils.createOneBasedArray(noOfStops, 0)
     res.cargoAtStopLongWait = luaUtils.createOneBasedArray(noOfStops, 0)
     res.legDemand = luaUtils.createOneBasedArray(noOfStops, 0)
+    res.cargoTypeCounts = {} -- map cargoType (int) -> count of items on the line (in veh + waiting)
 
     -- copied from passenger version
-    for _, personId in pairs(cargoForLineArr) do 
-        local simEntityAtTerminal = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
-        local simEntityAtVeh = api.engine.getComponent(personId, api.type.ComponentType.SIM_ENTITY_AT_VEHICLE)
+    for _, cargoId in pairs(cargoForLineArr) do
+        local simEntityAtTerminal = api.engine.getComponent(cargoId, api.type.ComponentType.SIM_ENTITY_AT_TERMINAL)
+        local simEntityAtVeh = api.engine.getComponent(cargoId, api.type.ComponentType.SIM_ENTITY_AT_VEHICLE)
 
         -- Waiting at terminal
-        if simEntityAtTerminal then 
+        if simEntityAtTerminal then
             if simEntityAtTerminal.line == lineId then
                 local stopNo = simEntityAtTerminal.lineStop0 + 1
 
                 res.lineDemand = res.lineDemand + 1
                 res.waitingCount  = res.waitingCount + 1
                 res.cargoAtStop[stopNo] = res.cargoAtStop[stopNo] + 1
+                lineStatsHelper.tallyCargoType(res.cargoTypeCounts, cargoId)
                 local waitTime = gameTime - luaUtils.getTimeInSecs(simEntityAtTerminal.arrivalTime)
 
                 if lineFreq > 60  and waitTime > lineFreq + 60 then
@@ -594,6 +596,7 @@ function lineStatsHelper.fillCargoInfo(res, lineId, noOfStops, lineFreq)
             if simEntityAtVeh.line == lineId then
                 res.lineDemand = res.lineDemand + 1
                 res.inVehCount = res.inVehCount + 1
+                lineStatsHelper.tallyCargoType(res.cargoTypeCounts, cargoId)
                 lineStatsHelper.recordSimJourney(simEntityAtVeh, res.legDemand, noOfStops)
             end
         end
@@ -605,6 +608,64 @@ function lineStatsHelper.fillCargoInfo(res, lineId, noOfStops, lineFreq)
     return res
 end
 
+---Increments the count for a cargo item's cargo type in the given counts map.
+---@param counts table -- map cargoType (int) -> count
+---@param cargoId number -- sim cargo entity id
+function lineStatsHelper.tallyCargoType(counts, cargoId)
+    local simCargo = api.engine.getComponent(cargoId, api.type.ComponentType.SIM_CARGO)
+    if simCargo and simCargo.cargoType then
+        counts[simCargo.cargoType] = (counts[simCargo.cargoType] or 0) + 1
+    end
+end
 
+---Returns the top N cargo types by count, sorted descending. Other is aggregated into a single entry with cargoType = -1.
+---@param cargoTypeCounts table -- map cargoType (int) -> count. Cargo type of -1 indicates "Other"
+---@param topN number
+---@return table -- array of { cargoType = int, count = int }. cargo type of -1 indicates "Other"
+function lineStatsHelper.getTopCargoTypesForLine(cargoTypeCounts, topN)
+    local arr = {}
+    for cargoType, count in pairs(cargoTypeCounts) do
+        table.insert(arr, { cargoType = cargoType, count = count })
+    end
+    table.sort(arr, function(a, b)
+        if a.count == b.count then return a.cargoType < b.cargoType end
+        return a.count > b.count
+    end)
+
+    local result = {}
+    for i = 1, math.min(topN, #arr) do
+        result[i] = arr[i]
+    end
+
+    if #arr > topN then
+        local otherCount = 0
+        for i = topN + 1, #arr do
+            otherCount = otherCount + arr[i].count
+        end
+        table.insert(result, { cargoType = -1, count = otherCount }) -- -1 indicates "Other"
+    end
+
+    return result
+end
+
+---Resolves a cargo type id to its display name and icon path (with safe fallbacks).
+---@param cargoType number
+---@return table -- { name = string, icon = string }
+function lineStatsHelper.getCargoTypeDisplay(cargoType)
+    local name = "Unknown Cargo"
+    local icon = "ui/cargo_dest.tga"
+
+    if cargoType == -1 then
+        name = _("Other")
+        return { name = name, icon = icon }
+    end
+
+    local ok, cargoTypeData = pcall(function() return api.res.cargoTypeRep.get(cargoType) end)
+    if ok and cargoTypeData then
+        if cargoTypeData.name then name = _(cargoTypeData.name) end
+        if cargoTypeData.icon then icon = cargoTypeData.icon end
+    end
+    return { name = name, icon = icon }
+end
 
 return lineStatsHelper
