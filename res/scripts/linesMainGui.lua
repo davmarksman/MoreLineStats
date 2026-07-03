@@ -128,10 +128,10 @@ function linesMainGui.createLostTrainsTable()
 
     local resetTrainsInViewButton =uiUtil.createButton("Reset Trains In View")
     resetTrainsInViewButton:onClick(lostTrainsHelper.resetVisibleTrains)
+    local resetBtnHolder = uiUtil.makeHorizontal(resetLostTrainsButton,resetTrainsInViewButton)
 
     uiElems.floatLayoutLost:addItem(uiElems.scrollAreaLostTrains,0,1)
-    uiElems.floatLayoutLost:addItem(resetLostTrainsButton,0,0)
-    uiElems.floatLayoutLost:addItem(resetTrainsInViewButton,0,0)
+    uiElems.floatLayoutLost:addItem(resetBtnHolder,0,0)
 end
 
 function linesMainGui.fillLostLines()
