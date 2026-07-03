@@ -11,6 +11,7 @@ local vehicle2cargoMapCache = {}
 local lineWindows = {}
 local stationTables = {}
 local lineVehTables = {}
+local moreStatsTables = {}
 local lineImgsForLine = {}
 
 function cargoLineGui.createGui(lineId)
@@ -25,7 +26,7 @@ function cargoLineGui.createGui(lineId)
             -- Cache the list of vehicles for use later
             vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
 
-            cargoLineGui.fillStationTable(lineId, stationTables[lineId])
+            cargoLineGui.fillLineStatistics(lineId, stationTables[lineId], moreStatsTables[lineId])
             lineVehTables[lineId]:deleteAll()
             lineWindows[lineId]:setVisible(true, true)
 
@@ -40,9 +41,12 @@ function cargoLineGui.createGui(lineId)
         local stationScrollArea = cargoLineGui.createStationsArea(lineIdStr, stationTable)
         lineFloatLayout:addItem(stationScrollArea,0,0)
 
+        local moreStatsTable = cargoLineGui.createMoreStatsTable()
         local lineVehTable = api.gui.comp.Table.new(1, 'SINGLE')
         local scrollAreaVeh = cargoLineGui.createVehArea(lineIdStr, lineVehTable)
-        lineFloatLayout:addItem(scrollAreaVeh,1,0)
+
+        local verticalLayoutTopRight = uiUtil.makeVertical(moreStatsTable, scrollAreaVeh)
+        lineFloatLayout:addItem(verticalLayoutTopRight,1,0)
 
 
         local refreshDataBtn = uiUtil.createButton("Reload Data")
@@ -74,7 +78,7 @@ function cargoLineGui.createGui(lineId)
             end
         end)
 
-        cargoLineGui.fillStationTable(lineId, stationTable)
+        cargoLineGui.fillLineStatistics(lineId, stationTable, moreStatsTable)
 
         -- Cache the list of vehicles for use later
         vehicle2cargoMapCache = api.engine.system.simEntityAtVehicleSystem.getVehicle2Cargo2SimEntitesMap()
@@ -87,6 +91,7 @@ function cargoLineGui.createGui(lineId)
         lineWindows[lineId] = lineWindow
         stationTables[lineId] = stationTable
         lineVehTables[lineId] = lineVehTable
+        moreStatsTables[lineId] = moreStatsTable
 
         print(string.format("cargoLineGui.createGui. Elapsed time: %.4f", os.clock() - start_time))
     else
@@ -116,18 +121,63 @@ local rightWidth = 280
 --- Sets up UI Elements for the Right table
 function cargoLineGui.createVehArea(lineIdStr, lineVehTable)
     local scrollAreaVeh = api.gui.comp.ScrollArea.new(lineVehTable, "lineInfo.cargoLineUi.scrollAreaVeh" .. lineIdStr)
-    scrollAreaVeh:setMinimumSize(api.gui.util.Size.new(rightWidth, 170))
-    scrollAreaVeh:setMaximumSize(api.gui.util.Size.new(rightWidth, 170))
+    scrollAreaVeh:setMinimumSize(api.gui.util.Size.new(rightWidth, 380))
+    scrollAreaVeh:setMaximumSize(api.gui.util.Size.new(rightWidth, 380))
     return scrollAreaVeh
 end
 
 
-function cargoLineGui.fillStationTable(lineId, stationTable)
+function cargoLineGui.createMoreStatsTable()
+    local moreStatsTable = api.gui.comp.Table.new(2, 'SINGLE')
+    moreStatsTable:setColWidth(0,160)
+    return moreStatsTable
+end
+
+function cargoLineGui.fillLineStatistics(lineId, stationTable, moreStatsTable)
+    local lineStats = lineStatsHelper.getCargoStatsForLine(lineId, {})
+    cargoLineGui.fillStationTable(lineId, stationTable, lineStats)
+    cargoLineGui.fillMoreStatsTable(moreStatsTable, lineStats)
+end
+
+function cargoLineGui.fillMoreStatsTable(moreStatsTable, lineStats)
+    moreStatsTable:deleteAll()
+
+    if not lineStats then return end
+
+    local lblDemand = api.gui.comp.TextView.new(tostring(lineStats.lineDemand) .. " (" .. string.format("%.d%%", lineStats.demandCapRatio * 100) .. ")")
+    lblDemand:setTooltip("Total cargo on line (in vehicles + waiting). The percentage indicates demand as a percentage of line capacity.")
+    moreStatsTable:addRow({api.gui.comp.TextView.new("Demand"), lblDemand})
+
+    local lblLoadCap = api.gui.comp.TextView.new(lineStats.inVehCount .. "/" .. lineStats.lineCapacity)
+    lblLoadCap:setTooltip("Cargo in vehicles (Loaded) / Line capacity.")
+    moreStatsTable:addRow({api.gui.comp.TextView.new("Cargo"), lblLoadCap})
+
+    local compWaiting = uiUtil.makeIconText(tostring(lineStats.waitingCount), "ui/hud/cargo_goods.tga")
+    compWaiting:setTooltip(_("Cargo waiting"))
+    moreStatsTable:addRow({api.gui.comp.TextView.new("Waiting"), compWaiting})
+
+    local lblAvgSpeed = api.gui.comp.TextView.new(lineStats.totalAvgSpeedStr)
+    lblAvgSpeed:setTooltip("Average speed of vehicles on the line (as the crow flies)")
+    moreStatsTable:addRow({api.gui.comp.TextView.new("Average Speed"), lblAvgSpeed})
+
+    local lblJourneyTime = api.gui.comp.TextView.new(luaUtils.getTimeStr(lineStats.totalLegTime))
+    lblJourneyTime:setTooltip("Total journey time for the line (sum of leg times between stops).")
+    moreStatsTable:addRow({api.gui.comp.TextView.new("Journey"), lblJourneyTime})
+
+    local lblDistance = api.gui.comp.TextView.new(string.format("%.1f km", lineStats.totalDistanceKm))
+    lblDistance:setTooltip("Total line length (as the crow flies)")
+    moreStatsTable:addRow({api.gui.comp.TextView.new("Distance"), lblDistance})
+
+    local lblFrequency = api.gui.comp.TextView.new(lineStats.lineFreqStr)
+    lblFrequency:setTooltip("Time between two vehicles of that line at normal game speed")
+    moreStatsTable:addRow({api.gui.comp.TextView.new("Frequency"), lblFrequency})
+end
+
+function cargoLineGui.fillStationTable(lineId, stationTable, lineStats)
     -- Clear the table
     stationTable:deleteAll()
 
     -- Data
-    local lineStats = lineStatsHelper.getCargoStatsForLine(lineId, {})
     if not lineStats then
         local header1 = api.gui.comp.TextView.new("ERROR")
         local header2 = api.gui.comp.TextView.new("")

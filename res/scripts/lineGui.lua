@@ -338,6 +338,8 @@ end
 function lineGui.fillMoreStatsTable( moreStatsTable, lineStats)
     moreStatsTable:deleteAll()
 
+    if not lineStats then return end
+
     local lblDemand = api.gui.comp.TextView.new(tostring(lineStats.lineDemand) .. " (" ..string.format("%.d%%", lineStats.demandCapRatio * 100) ..")")
     lblDemand:setTooltip("Total passengers on line (in vehicles + waiting). The percentage in brackets indicates demand as a percentage of line capacity. Higher numbers indicate there may not be enough vehicles on the line.")
     moreStatsTable:addRow({api.gui.comp.TextView.new("Demand"), lblDemand})
