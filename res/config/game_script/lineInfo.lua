@@ -1,10 +1,8 @@
 local lineGui = require "lineGui"
 local cargoLineGui = require "cargoLineGui"
 local linesMainGui = require "linesMainGui"
-local lostTrainsHelper = require "lostTrainsHelper"
 local lineStatsHelper = require "lineStatsHelper"
 local uiUtil = require "uiUtil"
-
 
 function data()
   return {
@@ -54,15 +52,10 @@ function data()
                 end
             end)
 
-            local resetAllTrainsLabel = gui.textView_create("gameInfo.lineInfo.resetTrainsLabel","Reset Trains In View")
-            local resetButton = gui.button_create("gameInfo.lineInfo.resetTrainsButton", resetAllTrainsLabel)
-            resetButton:onClick(lostTrainsHelper.resetVisibleTrains)
-
             -- add elements to ui
             local gameInfoLayout = api.gui.util.getById("gameInfo"):getLayout()
             gameInfoLayout:addItem(line)
             game.gui.boxLayout_addItem("gameInfo.layout", button.id)
-            game.gui.boxLayout_addItem("gameInfo.layout", resetButton.id)
         end,
     }
 end
