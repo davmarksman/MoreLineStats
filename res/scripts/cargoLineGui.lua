@@ -145,7 +145,7 @@ function cargoLineGui.fillMoreStatsTable(moreStatsTable, lineStats)
     if not lineStats then return end
 
     local lblDemand = api.gui.comp.TextView.new(tostring(lineStats.lineDemand) .. " (" .. string.format("%.d%%", lineStats.demandCapRatio * 100) .. ")")
-    lblDemand:setTooltip("Total cargo on line (in vehicles + waiting). The percentage indicates demand as a percentage of line capacity.")
+    lblDemand:setTooltip("Total cargo on line (in vehicles + waiting).\nThe percentage indicates demand as a percentage of line capacity.")
     moreStatsTable:addRow({api.gui.comp.TextView.new("Demand"), lblDemand})
 
     local lblLoadCap = api.gui.comp.TextView.new(lineStats.inVehCount .. "/" .. lineStats.lineCapacity)
