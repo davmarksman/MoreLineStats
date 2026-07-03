@@ -62,6 +62,11 @@ REPO
 https://github.com/davmarksman/MoreLineStats
 
 ---
+UPDATE 1.6
+- Line summary section within the line window (no longer need to open the line list to see summary stats like line total distance)
+- The cargo line window shows the main cargo types being carried on the line (in vehicles + waiting)
+- Moved Reset Trains in view button from game bar to the lost trains tab
+
 UPDATE 1.5
 - Support for cargo lines
 
