@@ -26,9 +26,11 @@ local uiElems = {
     passengerTable = nil,
     passengerTableItems = nil,
     passengerToggleBtns = nil,
+    passengerSearchInput = nil,
 
     floatLayoutCargoLines = nil,
     cargoToggleBtns = nil,
+    cargoSearchInput = nil,
     cargoTableItems = nil,
     cargoTable = nil,
 }
@@ -36,6 +38,7 @@ local uiElems = {
 -- Shared between passenger and cargo tabs
 local uiState = {
     lastSelectedFilter = "ALL", -- Default filter
+    searchText = "", -- Current line name search text (lower case)
     allLinesCache = {}, -- Cache for all lines (of cargo or passenger). Array,
     sortDesc = false, -- Sort order
     lastTab = PASSENGER_TAB, -- last selected tab index
@@ -80,8 +83,9 @@ function linesMainGui.showOrCreateUi()
     uiElems.floatLayoutPassengerLines = uiUtil.createFloatingLayout("lineInfo.mainUi.floatingLayoutPsngrLines")
     uiElems.passengerToggleBtns = linesMainGui.createLineFilterToggles()
     local passengerLineFilter = linesMainGui.createLineFilter(uiElems.passengerToggleBtns)
+    uiElems.passengerSearchInput = linesMainGui.createSearchInput()
 
-    linesMainGui.createPassengerTableHeader(passengerLineFilter)
+    linesMainGui.createPassengerTableHeader(passengerLineFilter, uiElems.passengerSearchInput)
     linesMainGui.createPassengerTable()
 
     -- Cargo Lines
@@ -89,8 +93,9 @@ function linesMainGui.showOrCreateUi()
     uiElems.floatLayoutCargoLines = uiUtil.createFloatingLayout("lineInfo.mainUi.floatingLayoutCargoLines")
     uiElems.cargoToggleBtns = linesMainGui.createLineFilterToggles()
     local cargoLineFilter = linesMainGui.createLineFilter(uiElems.cargoToggleBtns)
+    uiElems.cargoSearchInput = linesMainGui.createSearchInput()
 
-    linesMainGui.createCargoTableHeader(cargoLineFilter)
+    linesMainGui.createCargoTableHeader(cargoLineFilter, uiElems.cargoSearchInput)
     linesMainGui.createCargoTable()
 
     -- Lost Trains
@@ -206,44 +211,37 @@ function linesMainGui.createLineFilterToggles()
     return toggleBtns
 end
 
+---Creates the text box used to filter lines by name
+function linesMainGui.createSearchInput()
+    local searchInput = api.gui.comp.TextInputField.new(_("Search line name..."))
+    searchInput:setMaxLength(50)
+    searchInput:setMinimumSize(api.gui.util.Size.new(700, 30))
+    searchInput:setMaximumSize(api.gui.util.Size.new(700, 30))
+    searchInput:setGravity(-1, 0)
+    searchInput:onChange(function(text)
+        uiState.searchText = string.lower(text or "")
+        linesMainGui.applyFilters()
+    end)
+    return searchInput
+end
+
+---Builds the row above the column headers: type toggles, search box and reload button
+function linesMainGui.createTopBar(lineFilter, searchInput, refreshDataBtn)
+    local layout = api.gui.layout.BoxLayout.new("HORIZONTAL")
+    layout:addItem(lineFilter)
+    layout:addItem(searchInput)
+    layout:addItem(refreshDataBtn)
+    local topBar = api.gui.comp.Component.new("")
+    topBar:setLayout(layout)
+    topBar:setMinimumSize(api.gui.util.Size.new(windowWidth, 30))
+    return topBar
+end
+
 ---This filters the list of lines based on the line type
 ---@param typeOfLine string
 ---@param toggleButtons any
 function linesMainGui.filterToLinesOfType(typeOfLine, toggleButtons)
     uiState.lastSelectedFilter = typeOfLine
-
-    local tableItems = uiElems.passengerTableItems
-    if uiState.lastTab == CARGO_TAB then
-        tableItems = uiElems.cargoTableItems
-    end
-
-    if tableItems == nil then
-        print("No table items to filter!")
-        return
-    end
-
-    if typeOfLine == "ALL" then
-        for _, elemsForLine in pairs(tableItems) do
-            for _, uiEl in pairs(elemsForLine) do
-                uiEl:setVisible(true,false)
-            end
-        end
-    else
-        for _,lineStats in pairs(uiState.allLinesCache) do
-            if tableItems[lineStats.lineId] then
-                local elemsForLine = tableItems[lineStats.lineId]
-                if lineStats.vehicleTypeStr == typeOfLine then
-                    for _, uiEl in pairs(elemsForLine) do
-                        uiEl:setVisible(true,false)
-                    end
-                else
-                    for _, uiEl in pairs(elemsForLine) do
-                        uiEl:setVisible(false,false)
-                    end
-                end
-            end
-        end
-    end
 
     -- set all other toggle buttons as unselected
     for _, toggleButton in pairs(toggleButtons) do
@@ -253,6 +251,74 @@ function linesMainGui.filterToLinesOfType(typeOfLine, toggleButtons)
     if toggleButtons[typeOfLine] then
         toggleButtons[typeOfLine]:setSelected(true,false)
     end
+
+    linesMainGui.applyFilters()
+end
+
+---Splits the search text on ',' into trimmed, lower case, non-empty terms
+---@param searchText string
+---@return table terms array of strings
+function linesMainGui.parseSearchTerms(searchText)
+    local terms = {}
+    for term in string.gmatch(searchText or "", "[^,]+") do
+        local trimmed = string.lower(string.match(term, "^%s*(.-)%s*$"))
+        if trimmed ~= "" then
+            table.insert(terms, trimmed)
+        end
+    end
+    return terms
+end
+
+---Returns true if there are no search terms, or the line name contains any one of them
+---@param lineName string
+---@param terms table
+---@return boolean
+function linesMainGui.nameMatchesAnyTerm(lineName, terms)
+    if #terms == 0 then
+        return true
+    end
+    local lowerName = string.lower(lineName or "")
+    for _, term in ipairs(terms) do
+        if string.find(lowerName, term, 1, true) ~= nil then
+            return true
+        end
+    end
+    return false
+end
+
+---Shows only the lines matching both the selected line type and the search text
+function linesMainGui.applyFilters()
+    local tableItems = uiElems.passengerTableItems
+    local searchInput = uiElems.passengerSearchInput
+    if uiState.lastTab == CARGO_TAB then
+        tableItems = uiElems.cargoTableItems
+        searchInput = uiElems.cargoSearchInput
+    end
+
+    if tableItems == nil then
+        print("No table items to filter!")
+        return
+    end
+
+    -- Keep the search text in sync with the text box of the current tab
+    if searchInput ~= nil then
+        uiState.searchText = string.lower(searchInput:getText() or "")
+    end
+
+    local typeOfLine = uiState.lastSelectedFilter
+    local searchTerms = linesMainGui.parseSearchTerms(uiState.searchText)
+
+    for _, lineStats in pairs(uiState.allLinesCache) do
+        local elemsForLine = tableItems[lineStats.lineId]
+        if elemsForLine then
+            local matchesType = typeOfLine == "ALL" or lineStats.vehicleTypeStr == typeOfLine
+            local matchesName = linesMainGui.nameMatchesAnyTerm(lineStats.lineName, searchTerms)
+            local visible = matchesType and matchesName
+            for _, uiEl in pairs(elemsForLine) do
+                uiEl:setVisible(visible,false)
+            end
+        end
+    end
 end
 
 
@@ -260,7 +326,7 @@ end
 --- Passengers
 --- ----------------------------------------------------
 
-function linesMainGui.createPassengerTableHeader(lineFilter)
+function linesMainGui.createPassengerTableHeader(lineFilter, searchInput)
     local lineHeaderTable = api.gui.comp.Table.new(#colWidths, 'SINGLE')
     for i, width in pairs(colWidths) do
         lineHeaderTable:setColWidth(i-1,width)
@@ -304,11 +370,14 @@ function linesMainGui.createPassengerTableHeader(lineFilter)
         linesMainGui.initTab(PASSENGER_TAB)
     end)
 
-    --Add filter & refreshDataBtn then the column headers
-    lineHeaderTable:addRow({lineFilter,api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),refreshDataBtn })
+    -- Top bar (filter, search & reload) above the column headers
+    local topBar = linesMainGui.createTopBar(lineFilter, searchInput, refreshDataBtn)
     lineHeaderTable:addRow({nameBtn, demandBtn,demandCapBtn,loadBtn,waitingBtn,maxStnBtn,longWaitBtn,avgSpdBtn,journeyBtn, distBtn,freqBtn})
 
-    uiElems.floatLayoutPassengerLines:addItem(lineHeaderTable,0,0)
+    -- Stack the top bar and the column headers into one component (the floating layout only handles two rows well)
+    local headerLayout = api.gui.layout.BoxLayout.new("VERTICAL")
+    local header = uiUtil.createComp(headerLayout, topBar, lineHeaderTable)
+    uiElems.floatLayoutPassengerLines:addItem(header,0,0)
 end
 
 function linesMainGui.createPassengerTable()
@@ -380,7 +449,7 @@ end
 --- Cargo
 --- ----------------------------------------------------
 
-function linesMainGui.createCargoTableHeader(lineFilter)
+function linesMainGui.createCargoTableHeader(lineFilter, searchInput)
     local lineHeaderTable = api.gui.comp.Table.new(#colWidths, 'SINGLE')
     for i, width in pairs(colWidths) do
         lineHeaderTable:setColWidth(i-1,width)
@@ -424,11 +493,14 @@ function linesMainGui.createCargoTableHeader(lineFilter)
         linesMainGui.initTab(CARGO_TAB)
     end)
 
-    --Add filter & refreshDataBtn then the column headers
-    lineHeaderTable:addRow({lineFilter,api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),api.gui.comp.TextView.new(""),refreshDataBtn })
+    -- Top bar (filter, search & reload) above the column headers
+    local topBar = linesMainGui.createTopBar(lineFilter, searchInput, refreshDataBtn)
     lineHeaderTable:addRow({nameBtn, demandBtn,demandCapBtn,loadBtn,waitingBtn,maxStnBtn,longWaitBtn,avgSpdBtn,journeyBtn, distBtn,freqBtn})
 
-    uiElems.floatLayoutCargoLines:addItem(lineHeaderTable,0,0)
+    -- Stack the top bar and the column headers into one component (the floating layout only handles two rows well)
+    local headerLayout = api.gui.layout.BoxLayout.new("VERTICAL")
+    local header = uiUtil.createComp(headerLayout, topBar, lineHeaderTable)
+    uiElems.floatLayoutCargoLines:addItem(header,0,0)
 end
 
 function linesMainGui.createCargoTable()
